@@ -30,6 +30,7 @@
 
         header {
             margin-top: 30px;
+            margin-bottom: 20px;
             text-align: center;
         }
 
@@ -38,11 +39,6 @@
             font-size: 2.5rem;
             color: var(--accent-color);
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-        }
-
-        p.subtitle {
-            margin: 5px 0 20px 0;
-            color: #aaaaaa;
         }
 
         #board {
@@ -57,6 +53,38 @@
         .white-1e1d7 { background-color: var(--light-square) !important; color: var(--accent-color) !important; }
         .black-3c85d { background-color: var(--accent-color) !important; color: var(--light-square) !important; }
         
+        /* Ensure squares can hold the absolute positioned dots */
+        .square-55d63 { position: relative; }
+
+        /* Dot for empty square moves */
+        .highlight-dot::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 25%;
+            height: 25%;
+            background-color: rgba(0, 0, 0, 0.25);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none; /* Allows clicking through the dot */
+        }
+
+        /* Ring for capturing enemy pieces */
+        .highlight-capture::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 85%;
+            height: 85%;
+            border: 6px solid rgba(0, 0, 0, 0.25);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-sizing: border-box;
+            pointer-events: none;
+        }
+
         #status {
             font-weight: 600;
             font-size: 1.2rem;
@@ -74,7 +102,7 @@
         }
 
         .btn {
-            background-color: #2c2c2c;
+            background-color: var(--accent-color);
             color: white;
             border: none;
             padding: 15px;
@@ -86,53 +114,21 @@
             transition: 0.2s;
         }
 
-        .btn-primary { background-color: var(--accent-color); }
-        .btn-primary:active { background-color: #5c7741; }
+        .btn:active { background-color: #5c7741; }
 
-        .play-room {
-            background: #1e1e1e;
-            padding: 15px;
-            border-radius: 8px;
-            display: flex;
-            gap: 10px;
-        }
-
-        .play-room input {
-            flex: 1;
-            padding: 10px;
-            border-radius: 6px;
-            border: 1px solid #333;
-            background: #121212;
-            color: white;
-            font-family: 'Poppins', sans-serif;
-        }
-        
-        .disclaimer {
-            font-size: 0.8rem; 
-            color: #666; 
-            text-align: center; 
-            margin-top: -5px;
-        }
     </style>
 </head>
 <body>
 
     <header>
         <h1>Chess Anywhere</h1>
-        <p class="subtitle">Premium Pass & Play</p>
     </header>
 
     <div id="board"></div>
     <div id="status">White to move</div>
 
     <div class="menu">
-        <button class="btn btn-primary" onclick="resetGame()">Pass and Play (Restart)</button>
-        
-        <div class="play-room">
-            <input type="text" id="roomCode" placeholder="Enter Room Code">
-            <button class="btn" onclick="joinRoom()">Join</button>
-        </div>
-        <p class="disclaimer">*Multiplayer requires a backend server upgrade</p>
+        <button class="btn" onclick="resetGame()">Restart Game</button>
     </div>
 
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
@@ -142,30 +138,99 @@
         var board = null;
         var game = new Chess();
         var $status = $('#status');
+        var selectedSquare = null;
 
+        // Clears the dots from the board
+        function removeHighlights() {
+            $('#board .square-55d63').removeClass('highlight-dot highlight-capture');
+        }
+
+        // Shows dots for valid moves
+        function showMoves(square) {
+            var moves = game.moves({ square: square, verbose: true });
+            if (moves.length === 0) return;
+
+            for (var i = 0; i < moves.length; i++) {
+                var move = moves[i];
+                var $square = $('#board .square-' + move.to);
+                
+                if (move.captured) {
+                    $square.addClass('highlight-capture');
+                } else {
+                    $square.addClass('highlight-dot');
+                }
+            }
+        }
+
+        // Handle Click-to-Move logic
+        $('#board').on('click', '.square-55d63', function() {
+            var square = $(this).attr('data-square');
+            var piece = game.get(square);
+
+            // If a square is already selected, try to move to the clicked square
+            if (selectedSquare) {
+                var move = game.move({
+                    from: selectedSquare,
+                    to: square,
+                    promotion: 'q'
+                });
+
+                // If valid move, update board
+                if (move) {
+                    board.position(game.fen());
+                    removeHighlights();
+                    selectedSquare = null;
+                    updateStatus();
+                    return;
+                }
+            }
+
+            // Deselect if clicking the same square
+            if (selectedSquare === square) {
+                selectedSquare = null;
+                removeHighlights();
+                return;
+            }
+
+            removeHighlights();
+
+            // Select piece and show dots if it's the current player's turn
+            if (piece && piece.color === game.turn()) {
+                selectedSquare = square;
+                showMoves(square);
+            } else {
+                selectedSquare = null;
+            }
+        });
+
+        // Handle Drag-and-Drop logic
         function onDragStart (source, piece, position, orientation) {
-            // Prevent moving if game is over or wrong color's turn
+            selectedSquare = null;
+            removeHighlights();
+
             if (game.game_over()) return false;
             if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
                 (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
                 return false;
             }
+            
+            // Show dots when dragging starts too
+            showMoves(source);
         }
 
         function onDrop (source, target) {
-            // Validate the move using chess.js
+            removeHighlights();
             var move = game.move({
                 from: source,
                 to: target,
-                promotion: 'q' // Automatically promote to queen for simplicity
+                promotion: 'q'
             });
 
-            if (move === null) return 'snapback'; // Illegal move
+            if (move === null) return 'snapback';
             updateStatus();
         }
 
         function onSnapEnd () {
-            // Update board for castling, en passant, etc.
             board.position(game.fen());
         }
 
@@ -186,14 +251,15 @@
             $status.html(statusHTML);
         }
 
-        // Initialize Board
+        // Initialize Board with Chess.com style pieces
         var config = {
             draggable: true,
             position: 'start',
             onDragStart: onDragStart,
             onDrop: onDrop,
             onSnapEnd: onSnapEnd,
-            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+            // Chess.com Neo style pieces!
+            pieceTheme: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/{piece}.png'
         };
         
         board = Chessboard('board', config);
@@ -203,16 +269,9 @@
         function resetGame() {
             game.reset();
             board.start();
+            selectedSquare = null;
+            removeHighlights();
             updateStatus();
-        }
-
-        function joinRoom() {
-            var code = document.getElementById('roomCode').value;
-            if(code.trim() === "") {
-                alert("Please enter a room code first.");
-            } else {
-                alert("Searching for Room: " + code + "\n\n(Note: You are currently playing 'Pass and Play'. Real-time multiplayer requires setting up a database next!)");
-            }
         }
         
         // Keep board responsive on mobile
