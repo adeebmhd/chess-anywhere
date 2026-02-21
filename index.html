@@ -139,14 +139,28 @@
             width: 95%; max-width: 400px; background: var(--surface-color); border: 1px solid var(--surface-border);
             border-radius: 12px; box-sizing: border-box; backdrop-filter: blur(10px);
             height: 35vh; min-height: 220px; overflow-y: auto; margin-bottom: 15px; 
-            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2); display: flex; flex-direction: column;
         }
-        /* Custom scrollbar for webkit */
         .explorer-stats-container::-webkit-scrollbar { width: 6px; }
         .explorer-stats-container::-webkit-scrollbar-track { background: transparent; }
         .explorer-stats-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
 
-        .opening-name { padding: 12px 15px; color: var(--text-muted); font-size: 0.95rem; font-weight: 500; border-bottom: 1px solid var(--surface-border); background: rgba(0,0,0,0.2);}
+        .explorer-header-row {
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.05); 
+            background: rgba(0,0,0,0.2); position: sticky; top: 0; z-index: 10;
+        }
+        .opening-name { color: var(--text-muted); font-size: 0.95rem; font-weight: 500; }
+        
+        .eval-badge {
+            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+            padding: 4px 10px; border-radius: 6px; font-family: 'Courier New', monospace;
+            font-weight: bold; font-size: 0.9rem; color: var(--text-main);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.3s;
+        }
+        .eval-positive { color: #82a85e; border-color: rgba(130, 168, 94, 0.4); background: rgba(130, 168, 94, 0.1); }
+        .eval-negative { color: #ff6b6b; border-color: rgba(255, 107, 107, 0.4); background: rgba(255, 107, 107, 0.1); }
+
         .explorer-move-row { display: flex; align-items: center; padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer; transition: 0.2s; }
         .explorer-move-row:hover { background: rgba(255,255,255,0.05); padding-left: 20px; }
         .exp-san { width: 50px; font-weight: 600; color: #fff; font-size: 1rem; }
@@ -212,7 +226,7 @@
                 grid-column: 2; 
                 grid-row: 2; 
                 width: 100%; 
-                height: 420px; /* Matches board size nicely */
+                height: 420px; 
                 margin: 0;
             }
             
@@ -240,7 +254,7 @@
         
         <button class="main-menu-btn" onclick="openExplorerMode()">
             <span style="font-size: 1.25rem; color:var(--text-main); font-weight: 600;">🧭 Explorer</span>
-            <span class="subtext">Player Database & Opening Stats</span>
+            <span class="subtext">Player Database & Live Engine</span>
         </button>
     </div>
 
@@ -301,8 +315,11 @@
         <div id="explorerBoard" class="board-wrapper"></div>
 
         <div class="explorer-stats-container">
-            <div class="opening-name" id="expOpeningName">Starting Position</div>
-            <div id="expMovesList">
+            <div class="explorer-header-row">
+                <div class="opening-name" id="expOpeningName">Starting Position</div>
+                <div class="eval-badge" id="expEvalBadge">Eval: <span id="expEvalText">0.00</span></div>
+            </div>
+            <div id="expMovesList" style="flex-grow: 1;">
                 <div style="padding: 30px; text-align: center; color: var(--text-muted);">Loading database...</div>
             </div>
         </div>
@@ -361,6 +378,7 @@
             $('.view-container').removeClass('active-view');
             $('#homeView').addClass('active-view');
             if (currentMode === 'play') { isPaused = true; updateClocks(); }
+            if (engine) engine.postMessage('stop'); // Stop engine when leaving explorer
             currentMode = 'home';
         }
 
@@ -380,9 +398,10 @@
             currentMode = 'explorer';
             if (!expBoard) initExplorerMode();
             expBoard.resize();
+            if (expGame) evaluateExplorerPosition(); // Start eval when returning
         }
 
-        // ================= PLAY MODE LOGIC =================
+        // ================= PLAY MODE LOGIC (Unchanged) =================
         var board = null, game = null, $status = $('#status'), selectedSquare = null;
         var timeLimit = 0, timeW = 0, timeB = 0, timerInterval = null, gameActive = false, isPaused = false;
         var redoStack = [], pendingMove = null, spinPieces = true, playMode = 'pvp';
@@ -391,7 +410,6 @@
             game = new Chess();
             var config = { draggable: false, position: 'start', pieceTheme: pieceBaseUrl + '{piece}.svg' };
             board = Chessboard('board', config);
-            
             $('#board').on('click', '.square-55d63', function() {
                 if (currentMode !== 'play' || !gameActive || isPaused || (playMode === 'ai' && game.turn() === 'b')) return; 
                 handleSquareClickPlayMode($(this).attr('data-square'));
@@ -419,60 +437,34 @@
                 game.load_pgn(save.pgn); timeLimit = save.timeLimit; timeW = save.timeW; timeB = save.timeB;
                 spinPieces = save.spinPieces; playMode = save.mode; 
                 $('#spinPiecesCheck').prop('checked', spinPieces); $('#gameMode').val(playMode);
-                if (playMode === 'ai') { $('#flipSettingRow').addClass('hidden'); $('#aiDifficulty').removeClass('hidden'); } 
-                else { $('#flipSettingRow').removeClass('hidden'); $('#aiDifficulty').addClass('hidden'); }
-                $('#aiDifficulty').val(save.diff);
-                board.position(game.fen()); redoStack = []; gameActive = true; isPaused = false;
-                $('#setupModal').addClass('hidden');
-                updateClocks(); updateStatus(); updateCapturesAndHistory();
-                if(playMode === 'ai' && game.turn() === 'b') setTimeout(makeComputerMove, 500);
+                if (playMode === 'ai') { $('#flipSettingRow').addClass('hidden'); $('#aiDifficulty').removeClass('hidden'); } else { $('#flipSettingRow').removeClass('hidden'); $('#aiDifficulty').addClass('hidden'); }
+                $('#aiDifficulty').val(save.diff); board.position(game.fen()); redoStack = []; gameActive = true; isPaused = false; $('#setupModal').addClass('hidden');
+                updateClocks(); updateStatus(); updateCapturesAndHistory(); if(playMode === 'ai' && game.turn() === 'b') setTimeout(makeComputerMove, 500);
             }
         }
 
         function showSetup() { $('#gameOverModal').addClass('hidden'); checkSave(); $('#setupModal').removeClass('hidden'); }
-
-        function customTimeSetup() {
-            var mins = prompt("Enter custom time in minutes:", "15");
-            if (mins !== null) {
-                var p = parseFloat(mins);
-                if (!isNaN(p) && p > 0) startGame(Math.floor(p * 60));
-            }
-        }
+        function customTimeSetup() { var mins = prompt("Enter custom time in minutes:", "15"); if (mins !== null) { var p = parseFloat(mins); if (!isNaN(p) && p > 0) startGame(Math.floor(p * 60)); } }
 
         function startGame(seconds) {
-            timeLimit = seconds; timeW = seconds; timeB = seconds;
-            playMode = $('#gameMode').val(); spinPieces = $('#spinPiecesCheck').is(':checked');
+            timeLimit = seconds; timeW = seconds; timeB = seconds; playMode = $('#gameMode').val(); spinPieces = $('#spinPiecesCheck').is(':checked');
             $('#blackLabel').text(playMode === 'ai' ? 'Black (Computer)' : 'Black');
-            game.reset(); board.start(); selectedSquare = null; removeHighlights(); redoStack = [];
-            gameActive = true; isPaused = false;
-            $('#setupModal').addClass('hidden');
-            updateClocks(); startTimer(); updateStatus(); updateCapturesAndHistory(); saveGameLocally();
+            game.reset(); board.start(); selectedSquare = null; removeHighlights(); redoStack = []; gameActive = true; isPaused = false;
+            $('#setupModal').addClass('hidden'); updateClocks(); startTimer(); updateStatus(); updateCapturesAndHistory(); saveGameLocally();
         }
 
-        function formatTime(sec) {
-            if (sec <= 0) return "00:00";
-            var m = Math.floor(sec / 60), s = sec % 60; return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
-        }
-
+        function formatTime(sec) { if (sec <= 0) return "00:00"; var m = Math.floor(sec / 60), s = sec % 60; return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s; }
         function updateClocks() {
             if (timeLimit === 0) { $('#whiteClock, #blackClock').text("∞"); return; }
-            $('#whiteClock').text(formatTime(timeW)); $('#blackClock').text(formatTime(timeB));
-            $('#whiteClock, #blackClock').removeClass('active low-time');
-            if (gameActive && !isPaused) {
-                var ac = game.turn() === 'w' ? $('#whiteClock') : $('#blackClock');
-                var at = game.turn() === 'w' ? timeW : timeB;
-                ac.addClass('active'); if (at < 30) ac.addClass('low-time');
-            }
+            $('#whiteClock').text(formatTime(timeW)); $('#blackClock').text(formatTime(timeB)); $('#whiteClock, #blackClock').removeClass('active low-time');
+            if (gameActive && !isPaused) { var ac = game.turn() === 'w' ? $('#whiteClock') : $('#blackClock'); var at = game.turn() === 'w' ? timeW : timeB; ac.addClass('active'); if (at < 30) ac.addClass('low-time'); }
         }
 
         function startTimer() {
-            if (timeLimit === 0) return; 
-            if (timerInterval) clearInterval(timerInterval);
+            if (timeLimit === 0) return; if (timerInterval) clearInterval(timerInterval);
             timerInterval = setInterval(function() {
                 if (!gameActive || isPaused || currentMode !== 'play') return;
-                if (game.turn() === 'w') { timeW--; if (timeW <= 0) endGame("Black", "on time"); } 
-                else { timeB--; if (timeB <= 0) endGame("White", "on time"); }
-                updateClocks();
+                if (game.turn() === 'w') { timeW--; if (timeW <= 0) endGame("Black", "on time"); } else { timeB--; if (timeB <= 0) endGame("White", "on time"); } updateClocks();
             }, 1000);
         }
 
@@ -493,53 +485,33 @@
             var vals = {p:1, n:3, b:3, r:5, q:9}, cW = {p:0,n:0,b:0,r:0,q:0}, cB = {p:0,n:0,b:0,r:0,q:0}, sW = 0, sB = 0;
             history.forEach(m => { if(m.captured) { if(m.color === 'w') { cW[m.captured]++; sW += vals[m.captured]; } else { cB[m.captured]++; sB += vals[m.captured]; } } });
             function bHtml(caps, cP) { var h=''; ['p','n','b','r','q'].forEach(p=>{for(var i=0;i<caps[p];i++)h+='<img src="'+pieceBaseUrl+cP+p.toUpperCase()+'.svg">'}); return h;}
-            var wH = bHtml(cW, 'b'), bH = bHtml(cB, 'w'); 
-            if(sW > sB) wH += '<span class="score-advantage">+' + (sW - sB) + '</span>';
-            if(sB > sW) bH += '<span class="score-advantage">+' + (sB - sW) + '</span>';
+            var wH = bHtml(cW, 'b'), bH = bHtml(cB, 'w'); if(sW > sB) wH += '<span class="score-advantage">+' + (sW - sB) + '</span>'; if(sB > sW) bH += '<span class="score-advantage">+' + (sB - sW) + '</span>';
             $('#whiteCaptures').html(wH); $('#blackCaptures').html(bH);
         }
 
         function evaluateBoard(g) { var t=0, v={'p':10,'n':30,'b':30,'r':50,'q':90,'k':900}; g.board().forEach(r=>{r.forEach(p=>{if(p)t+=p.color==='w'?v[p.type]:-v[p.type];});}); return t; }
         function minimax(g, d, a, b, isMax) {
-            if (d===0 || g.game_over()) return evaluateBoard(g);
-            var m = g.moves();
+            if (d===0 || g.game_over()) return evaluateBoard(g); var m = g.moves();
             if (isMax) { var mx=-99999; for(var i=0;i<m.length;i++){g.move(m[i]); mx=Math.max(mx,minimax(g,d-1,a,b,false)); g.undo(); a=Math.max(a,mx); if(b<=a)break;} return mx; } 
             else { var mn=99999; for(var i=0;i<m.length;i++){g.move(m[i]); mn=Math.min(mn,minimax(g,d-1,a,b,true)); g.undo(); b=Math.min(b,mn); if(b<=a)break;} return mn; }
         }
 
         function makeComputerMove() {
-            if (!gameActive || game.turn() === 'w') return;
-            $status.html('Computer thinking...').addClass('ai-thinking');
+            if (!gameActive || game.turn() === 'w') return; $status.html('Computer thinking...').addClass('ai-thinking');
             setTimeout(function() {
-                var m = game.moves(); if(m.length===0) return;
-                var d = parseInt($('#aiDifficulty').val()), bM = m[Math.floor(Math.random()*m.length)];
-                if (d>1) {
-                    var bV=99999, a=-99999, b=99999; m.sort(()=>Math.random()-0.5);
-                    for(var i=0;i<m.length;i++){ game.move(m[i]); var v=minimax(game,d-1,a,b,true); game.undo(); if(v<bV){bV=v;bM=m[i];} b=Math.min(b,v); }
-                }
+                var m = game.moves(); if(m.length===0) return; var d = parseInt($('#aiDifficulty').val()), bM = m[Math.floor(Math.random()*m.length)];
+                if (d>1) { var bV=99999, a=-99999, b=99999; m.sort(()=>Math.random()-0.5); for(var i=0;i<m.length;i++){ game.move(m[i]); var v=minimax(game,d-1,a,b,true); game.undo(); if(v<bV){bV=v;bM=m[i];} b=Math.min(b,v); } }
                 executeMove(bM); $status.removeClass('ai-thinking');
             }, 100);
         }
 
         function executeMove(mObj) {
             var m = game.move(mObj);
-            if (m) {
-                redoStack = []; board.position(game.fen()); removeHighlights(); selectedSquare = null;
-                updateStatus(); updateCapturesAndHistory(); saveGameLocally();
-                if (playMode === 'ai' && game.turn() === 'b' && gameActive) makeComputerMove();
-                return true;
-            } return false;
+            if (m) { redoStack = []; board.position(game.fen()); removeHighlights(); selectedSquare = null; updateStatus(); updateCapturesAndHistory(); saveGameLocally(); if (playMode === 'ai' && game.turn() === 'b' && gameActive) makeComputerMove(); return true; } return false;
         }
 
-        function undoMove() {
-            if (!gameActive || isPaused) return;
-            var m = game.undo(); if (playMode === 'ai' && m && game.turn() === 'b') { redoStack.push(m); m = game.undo(); }
-            if (m) { redoStack.push(m); board.position(game.fen()); removeHighlights(); selectedSquare = null; updateStatus(); updateCapturesAndHistory(); saveGameLocally(); }
-        }
-        function redoMove() {
-            if (!gameActive || isPaused || redoStack.length === 0) return;
-            executeMove(redoStack.pop()); if (playMode === 'ai' && redoStack.length > 0) executeMove(redoStack.pop());
-        }
+        function undoMove() { if (!gameActive || isPaused) return; var m = game.undo(); if (playMode === 'ai' && m && game.turn() === 'b') { redoStack.push(m); m = game.undo(); } if (m) { redoStack.push(m); board.position(game.fen()); removeHighlights(); selectedSquare = null; updateStatus(); updateCapturesAndHistory(); saveGameLocally(); } }
+        function redoMove() { if (!gameActive || isPaused || redoStack.length === 0) return; executeMove(redoStack.pop()); if (playMode === 'ai' && redoStack.length > 0) executeMove(redoStack.pop()); }
 
         function triggerPromotionUI(s, t, c) { pendingMove={from:s,to:t}; var h=''; ['q','r','n','b'].forEach(p=>{h+='<div class="promo-piece" onclick="finalizePromotion(\''+p+'\')"><img src="'+pieceBaseUrl+c+p.toUpperCase()+'.svg"></div>';}); $('#promoContainer').html(h); $('#promotionModal').removeClass('hidden'); }
         window.finalizePromotion = function(p) { $('#promotionModal').addClass('hidden'); executeMove({from:pendingMove.from,to:pendingMove.to,promotion:p}); pendingMove=null; };
@@ -549,19 +521,13 @@
 
         function handleSquareClickPlayMode(square) {
             var piece = game.get(square);
-            if (selectedSquare) {
-                if (game.moves({verbose:true}).some(m=>m.from===selectedSquare&&m.to===square&&m.promotion)) { triggerPromotionUI(selectedSquare, square, game.turn()); return; }
-                if (executeMove({ from: selectedSquare, to: square })) return;
-            }
+            if (selectedSquare) { if (game.moves({verbose:true}).some(m=>m.from===selectedSquare&&m.to===square&&m.promotion)) { triggerPromotionUI(selectedSquare, square, game.turn()); return; } if (executeMove({ from: selectedSquare, to: square })) return; }
             if (selectedSquare === square) { selectedSquare = null; removeHighlights(); return; }
-            removeHighlights();
-            if (piece && piece.color === game.turn()) { selectedSquare = square; $('#board .square-'+square).addClass('highlight-selected'); showMoves(square); } 
-            else { selectedSquare = null; }
+            removeHighlights(); if (piece && piece.color === game.turn()) { selectedSquare = square; $('#board .square-'+square).addClass('highlight-selected'); showMoves(square); } else { selectedSquare = null; }
         }
 
         function updateStatus() {
-            if (!gameActive) return;
-            var mC = game.turn() === 'b' ? 'Black' : 'White';
+            if (!gameActive) return; var mC = game.turn() === 'b' ? 'Black' : 'White';
             $('#undoBtn').prop('disabled', game.history().length === 0); $('#redoBtn').prop('disabled', redoStack.length === 0);
             $('#board .square-55d63').removeClass('last-move'); var h=game.history({verbose:true}); if(h.length>0){ $('#board .square-'+h[h.length-1].from).addClass('last-move'); $('#board .square-'+h[h.length-1].to).addClass('last-move'); }
             if (spinPieces && playMode === 'pvp' && game.turn() === 'b') $('#board').addClass('spin-pieces'); else $('#board').removeClass('spin-pieces');
@@ -572,10 +538,65 @@
         function copyPGN() { navigator.clipboard.writeText(game.pgn()).then(()=>alert("Copied!")); }
 
 
-        // ================= EXPLORER MODE LOGIC =================
+        // ================= EXPLORER MODE LOGIC (WITH STOCKFISH) =================
         var expBoard = null, expGame = null, expSelectedSquare = null;
         var expRedoStack = [];
         var expIsFlipped = false;
+        var engine = null;
+
+        // Load Stockfish safely from CDN using a Blob to bypass CORS
+        fetch('https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js')
+            .then(res => res.text())
+            .then(text => {
+                var blob = new Blob([text], {type: 'application/javascript'});
+                engine = new Worker(URL.createObjectURL(blob));
+                
+                engine.onmessage = function(event) {
+                    var line = event.data;
+                    if (line == 'uciok') {
+                        engine.postMessage('isready');
+                    } else if (line.indexOf('info depth') !== -1 && line.indexOf('score cp') !== -1) {
+                        var match = line.match(/score cp (-?\d+)/);
+                        if (match) {
+                            var score = parseInt(match[1]) / 100.0;
+                            // Stockfish sends evaluation from perspective of player to move. 
+                            // We standardize it so positive is ALWAYS good for white.
+                            if (expGame.turn() === 'b') score = -score; 
+                            
+                            var sign = score > 0 ? "+" : "";
+                            $('#expEvalText').text(sign + score.toFixed(2));
+                            
+                            // Update badge color
+                            var $badge = $('#expEvalBadge');
+                            $badge.removeClass('eval-positive eval-negative');
+                            if (score > 0.5) $badge.addClass('eval-positive');
+                            if (score < -0.5) $badge.addClass('eval-negative');
+                        }
+                    } else if (line.indexOf('info depth') !== -1 && line.indexOf('score mate') !== -1) {
+                        var match = line.match(/score mate (-?\d+)/);
+                        if (match) {
+                            var mateIn = parseInt(match[1]);
+                            if (expGame.turn() === 'b') mateIn = -mateIn;
+                            var sign = mateIn > 0 ? "+M" : "-M";
+                            $('#expEvalText').text(sign + Math.abs(mateIn));
+                            
+                            var $badge = $('#expEvalBadge');
+                            $badge.removeClass('eval-positive eval-negative');
+                            mateIn > 0 ? $badge.addClass('eval-positive') : $badge.addClass('eval-negative');
+                        }
+                    }
+                };
+                engine.postMessage('uci');
+            });
+
+        function evaluateExplorerPosition() {
+            if (!engine || currentMode !== 'explorer') return;
+            $('#expEvalText').text("...");
+            $('#expEvalBadge').removeClass('eval-positive eval-negative');
+            engine.postMessage('stop');
+            engine.postMessage('position fen ' + expGame.fen());
+            engine.postMessage('go depth 14'); // Depth 14 is fast enough for browsers
+        }
 
         function initExplorerMode() {
             expGame = new Chess();
@@ -588,6 +609,7 @@
             });
             
             fetchExplorerData(); 
+            evaluateExplorerPosition();
         }
 
         function expRemoveHighlights() { $('#explorerBoard .square-55d63').removeClass('highlight-dot highlight-capture highlight-selected last-move'); }
@@ -630,6 +652,7 @@
             }
             
             fetchExplorerData();
+            evaluateExplorerPosition(); // Trigger Stockfish every time a move is made
         }
 
         function fetchExplorerData() {
@@ -658,7 +681,8 @@
             var prefix = expGame.turn() === 'w' ? turnNum + ". " : turnNum + "... ";
 
             if (!data.moves || data.moves.length === 0) {
-                html = '<div style="padding: 30px; text-align: center; color: var(--text-muted);">No games found in database for this position.</div>';
+                // When DB runs out, tell the user the Engine is still running
+                html = '<div style="padding: 30px; text-align: center; color: var(--text-muted);">Unique position reached.<br><br><span style="color: var(--accent-color); font-weight: 600;">Engine analysis is active.</span></div>';
             } else {
                 data.moves.forEach(move => {
                     var total = move.white + move.draws + move.black;
