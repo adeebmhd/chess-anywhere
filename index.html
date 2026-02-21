@@ -67,7 +67,7 @@
             background-color: rgba(0, 0, 0, 0.25);
             border-radius: 50%;
             transform: translate(-50%, -50%);
-            pointer-events: none; /* Allows clicking through the dot */
+            pointer-events: none;
         }
 
         /* Ring for capturing enemy pieces */
@@ -140,12 +140,10 @@
         var $status = $('#status');
         var selectedSquare = null;
 
-        // Clears the dots from the board
         function removeHighlights() {
             $('#board .square-55d63').removeClass('highlight-dot highlight-capture');
         }
 
-        // Shows dots for valid moves
         function showMoves(square) {
             var moves = game.moves({ square: square, verbose: true });
             if (moves.length === 0) return;
@@ -162,12 +160,10 @@
             }
         }
 
-        // Handle Click-to-Move logic
         $('#board').on('click', '.square-55d63', function() {
             var square = $(this).attr('data-square');
             var piece = game.get(square);
 
-            // If a square is already selected, try to move to the clicked square
             if (selectedSquare) {
                 var move = game.move({
                     from: selectedSquare,
@@ -175,7 +171,6 @@
                     promotion: 'q'
                 });
 
-                // If valid move, update board
                 if (move) {
                     board.position(game.fen());
                     removeHighlights();
@@ -185,7 +180,6 @@
                 }
             }
 
-            // Deselect if clicking the same square
             if (selectedSquare === square) {
                 selectedSquare = null;
                 removeHighlights();
@@ -194,7 +188,6 @@
 
             removeHighlights();
 
-            // Select piece and show dots if it's the current player's turn
             if (piece && piece.color === game.turn()) {
                 selectedSquare = square;
                 showMoves(square);
@@ -203,7 +196,6 @@
             }
         });
 
-        // Handle Drag-and-Drop logic
         function onDragStart (source, piece, position, orientation) {
             selectedSquare = null;
             removeHighlights();
@@ -214,7 +206,6 @@
                 return false;
             }
             
-            // Show dots when dragging starts too
             showMoves(source);
         }
 
@@ -251,21 +242,19 @@
             $status.html(statusHTML);
         }
 
-        // Initialize Board with Chess.com style pieces
+        // Initialize Board with reliable, high-res open-source pieces
         var config = {
             draggable: true,
             position: 'start',
             onDragStart: onDragStart,
             onDrop: onDrop,
             onSnapEnd: onSnapEnd,
-            // Chess.com Neo style pieces!
-            pieceTheme: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/{piece}.png'
+            pieceTheme: 'https://lichess1.org/assets/piece/cburnett/{piece}.svg'
         };
         
         board = Chessboard('board', config);
         updateStatus();
 
-        // Button Functions
         function resetGame() {
             game.reset();
             board.start();
@@ -274,7 +263,6 @@
             updateStatus();
         }
         
-        // Keep board responsive on mobile
         $(window).resize(board.resize);
     </script>
 </body>
