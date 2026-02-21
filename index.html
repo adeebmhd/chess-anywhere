@@ -13,7 +13,7 @@
         :root {
             --bg-color: #121212;
             --text-color: #ffffff;
-            --accent-color: #739552; /* Default Classic Green */
+            --accent-color: #739552; 
             --light-square: #ebecd0; 
             --highlight: rgba(235, 226, 75, 0.7); 
             --clock-bg: #2c2c2c;
@@ -47,17 +47,15 @@
             touch-action: none; user-select: none; -webkit-user-select: none; margin-bottom: 8px;
         }
 
-        /* Themed Colors */
         .white-1e1d7 { background-color: var(--light-square) !important; color: var(--accent-color) !important; }
         .black-3c85d { background-color: var(--accent-color) !important; color: var(--light-square) !important; }
         
-        /* Piece Spinning & Highlights */
-        #board img { transition: transform 0.4s ease; } /* Smooth rotation for pieces */
+        #board img { transition: transform 0.4s ease; } 
         #board.spin-pieces img { transform: rotate(180deg); }
         
         .square-55d63 { position: relative; cursor: pointer; }
         .highlight-selected { background-color: var(--highlight) !important; }
-        .last-move { background-color: rgba(235, 226, 75, 0.4) !important; } /* Faint glow for last move */
+        .last-move { background-color: rgba(235, 226, 75, 0.4) !important; } 
 
         .highlight-dot::after {
             content: ''; position: absolute; top: 50%; left: 50%; width: 25%; height: 25%;
@@ -90,7 +88,6 @@
             font-size: 1rem; border-radius: 8px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 600; width: 100%;
         }
 
-        /* Modals */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0, 0, 0, 0.85); display: flex; justify-content: center; align-items: center;
@@ -207,7 +204,6 @@
         var timeLimit = 0, timeW = 0, timeB = 0, timerInterval = null, gameActive = false, isPaused = false;
         var redoStack = [], pendingMove = null, spinPieces = true, playMode = 'pvp';
 
-        // --- THEMES & UI ---
         function applyTheme(theme) {
             var root = document.documentElement;
             if(theme === 'classic') { root.style.setProperty('--accent-color', '#739552'); root.style.setProperty('--light-square', '#ebecd0'); }
@@ -216,9 +212,16 @@
             if(theme === 'bubblegum') { root.style.setProperty('--accent-color', '#d65a88'); root.style.setProperty('--light-square', '#f2c9d8'); }
         }
 
+        // FIXED LOGIC: Removes/adds the hidden class directly instead of using .show() / .hide()
         $('#gameMode').on('change', function() {
-            if (this.value === 'ai') { $('#spinPiecesCheck').prop('checked', false); $('#flipSettingRow').hide(); $('#aiDifficulty').show(); } 
-            else { $('#flipSettingRow').show(); $('#aiDifficulty').hide(); }
+            if (this.value === 'ai') { 
+                $('#spinPiecesCheck').prop('checked', false); 
+                $('#flipSettingRow').addClass('hidden'); 
+                $('#aiDifficulty').removeClass('hidden'); 
+            } else { 
+                $('#flipSettingRow').removeClass('hidden'); 
+                $('#aiDifficulty').addClass('hidden'); 
+            }
         });
 
         function copyPGN() {
@@ -226,7 +229,6 @@
             navigator.clipboard.writeText(game.pgn()).then(() => alert("Game copied to clipboard! Paste it into Chess.com or Lichess to analyze."));
         }
 
-        // --- AUDIO & HAPTICS ---
         var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         function playSound(type) {
             if(audioCtx.state === 'suspended') audioCtx.resume();
@@ -247,7 +249,6 @@
             }
         }
 
-        // --- GAME SAVING ---
         function saveGameLocally() {
             if(!gameActive) return;
             localStorage.setItem('chessSave', JSON.stringify({ 
@@ -265,7 +266,16 @@
                 spinPieces = save.spinPieces; playMode = save.mode; 
                 
                 $('#spinPiecesCheck').prop('checked', spinPieces);
-                $('#gameMode').val(playMode).change();
+                $('#gameMode').val(playMode);
+                
+                if (playMode === 'ai') {
+                    $('#flipSettingRow').addClass('hidden');
+                    $('#aiDifficulty').removeClass('hidden');
+                } else {
+                    $('#flipSettingRow').removeClass('hidden');
+                    $('#aiDifficulty').addClass('hidden');
+                }
+
                 $('#themeSelect').val(save.theme).change();
                 $('#aiDifficulty').val(save.diff);
 
@@ -417,11 +427,11 @@
                 } else {
                     var bestValue = 99999;
                     var alpha = -99999, beta = 99999;
-                    moves.sort(() => Math.random() - 0.5); // Add variety
+                    moves.sort(() => Math.random() - 0.5); 
                     
                     for (var i = 0; i < moves.length; i++) {
                         game.move(moves[i]);
-                        var boardValue = minimax(game, depth - 1, alpha, beta, true); // Evaluate as White's turn
+                        var boardValue = minimax(game, depth - 1, alpha, beta, true); 
                         game.undo();
                         if (boardValue < bestValue) {
                             bestValue = boardValue;
