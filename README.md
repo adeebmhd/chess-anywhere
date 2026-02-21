@@ -36,6 +36,7 @@ chess-anywhere/
 ├── index.html      # Main app structure, pro-gaming UI, and Core game logic + AI
 └── README.md       # Project documentation
 
+
 ## 🛠️ Built With
 
  * HTML5 / CSS3 - For the sleek, glass-like UI.
