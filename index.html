@@ -69,14 +69,30 @@
 
         #status { font-weight: 600; font-size: 1rem; margin-bottom: 10px; color: var(--light-square); text-align: center;}
 
-        .controls { display: flex; justify-content: space-between; width: 95%; max-width: 400px; margin-bottom: 10px; gap: 8px; }
-        .controls .btn { flex: 1; background-color: #333; font-size: 0.85rem; padding: 8px; }
+        .controls { display: flex; justify-content: space-between; width: 95%; max-width: 400px; margin-bottom: 8px; gap: 8px; flex-wrap: wrap;}
+        .controls .btn { flex: 1; background-color: #333; font-size: 0.85rem; padding: 8px; min-width: 20%;}
         .controls .btn:active { background-color: var(--accent-color); }
         .controls .btn:disabled { background-color: #222; color: #555; cursor: not-allowed; }
 
+        /* --- NEW EXPLORER PANEL UI --- */
+        #explorerPanel {
+            width: 95%; max-width: 400px; background: #1e1e1e; border-radius: 6px; padding: 10px;
+            box-sizing: border-box; margin-bottom: 15px; color: #fff; font-family: 'Poppins', sans-serif;
+        }
+        .explorer-header { font-size: 0.85rem; color: #aaa; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; border-bottom: 1px solid #333; padding-bottom: 4px; }
+        .explore-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 5px; border-bottom: 1px solid #2a2a2a; cursor: pointer; transition: 0.2s;}
+        .explore-row:hover { background: #2c2c2c; border-radius: 4px;}
+        .explore-row:last-child { border-bottom: none; }
+        .move-san { width: 25%; font-weight: bold; font-family: monospace; font-size: 1rem; color: var(--accent-color); }
+        .move-games { width: 25%; font-size: 0.75rem; color: #888; text-align: right; margin-right: 15px;}
+        .move-bar { flex: 1; display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: #555;}
+        .bar-w { background: #e0e0e0; }
+        .bar-d { background: #888; }
+        .bar-b { background: #444; }
+        
         .history-box {
             width: 95%; max-width: 400px; background: #1e1e1e; border-radius: 6px; padding: 10px;
-            box-sizing: border-box; height: 80px; overflow-y: auto; font-family: monospace; font-size: 0.9rem;
+            box-sizing: border-box; height: 70px; overflow-y: auto; font-family: monospace; font-size: 0.9rem;
             color: #aaa; margin-bottom: 15px; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 8px;
         }
         .history-move { background: #2c2c2c; padding: 2px 6px; border-radius: 4px; }
@@ -188,14 +204,26 @@
 
     <div class="controls">
         <button class="btn" id="undoBtn" onclick="undoMove()">⟲ Undo</button>
-        <button class="btn" id="pauseBtn" onclick="togglePause()">⏸ Pause</button>
         <button class="btn" id="redoBtn" onclick="redoMove()">⟳ Redo</button>
+        <button class="btn" onclick="toggleExplorer()" style="background-color: #2c5282;">🔍 Explorer</button>
+    </div>
+    <div class="controls">
+        <button class="btn" onclick="offerDraw()" style="background-color: #555;">½ Draw</button>
+        <button class="btn" id="pauseBtn" onclick="togglePause()">⏸ Pause</button>
+        <button class="btn" onclick="resign()" style="background-color: #8b3e3e;">⚐ Resign</button>
+    </div>
+
+    <div id="explorerPanel" class="hidden">
+        <div class="explorer-header">Opening Explorer (Master Database)</div>
+        <div id="explorerContent">
+            <div style="text-align:center; color:#aaa; font-size: 0.8rem; padding: 10px;">Make a move to see Grandmaster statistics...</div>
+        </div>
     </div>
 
     <div class="history-box" id="moveHistory"></div>
     
     <div class="menu">
-        <button class="btn" style="background: #333;" onclick="showSetup()">Setup</button>
+        <button class="btn" style="background: #333;" onclick="showSetup()">Setup Menu</button>
         <button class="btn" onclick="copyPGN()">Export PGN</button>
     </div>
 
@@ -206,6 +234,9 @@
         var board = null, game = new Chess(), $status = $('#status'), selectedSquare = null;
         var timeLimit = 0, timeW = 0, timeB = 0, timerInterval = null, gameActive = false, isPaused = false;
         var redoStack = [], pendingMove = null, spinPieces = true, playMode = 'pvp';
+        var showExplorer = false;
+
+        var pieceBaseUrl = 'https://raw.githubusercontent.com/oakmac/chessboardjs/master/img/chesspieces/wikipedia/';
 
         function applyTheme(theme) {
             var root = document.documentElement;
@@ -228,7 +259,7 @@
 
         function copyPGN() {
             if(game.pgn().length === 0) return alert("No moves to export yet!");
-            navigator.clipboard.writeText(game.pgn()).then(() => alert("Game copied to clipboard! Paste it into Chess.com or Lichess to analyze."));
+            navigator.clipboard.writeText(game.pgn()).then(() => alert("Game copied to clipboard!"));
         }
 
         var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -270,13 +301,8 @@
                 $('#spinPiecesCheck').prop('checked', spinPieces);
                 $('#gameMode').val(playMode);
                 
-                if (playMode === 'ai') {
-                    $('#flipSettingRow').addClass('hidden');
-                    $('#aiDifficulty').removeClass('hidden');
-                } else {
-                    $('#flipSettingRow').removeClass('hidden');
-                    $('#aiDifficulty').addClass('hidden');
-                }
+                if (playMode === 'ai') { $('#flipSettingRow').addClass('hidden'); $('#aiDifficulty').removeClass('hidden'); } 
+                else { $('#flipSettingRow').removeClass('hidden'); $('#aiDifficulty').addClass('hidden'); }
 
                 $('#themeSelect').val(save.theme).change();
                 $('#aiDifficulty').val(save.diff);
@@ -291,16 +317,12 @@
 
         function showSetup() { $('#gameOverModal').addClass('hidden'); checkSave(); $('#setupModal').removeClass('hidden'); }
 
-        // NEW: Custom Time Prompt Logic
         function customTimeSetup() {
             var mins = prompt("Enter custom time in minutes (e.g., 15 or 1.5):", "15");
             if (mins !== null) {
                 var parsedMins = parseFloat(mins);
-                if (!isNaN(parsedMins) && parsedMins > 0) {
-                    startGame(Math.floor(parsedMins * 60)); // Convert minutes to seconds
-                } else {
-                    alert("Please enter a valid number greater than 0.");
-                }
+                if (!isNaN(parsedMins) && parsedMins > 0) startGame(Math.floor(parsedMins * 60));
+                else alert("Please enter a valid number greater than 0.");
             }
         }
 
@@ -317,6 +339,7 @@
             
             $('#setupModal').addClass('hidden');
             updateClocks(); startTimer(); updateStatus(); updateCapturesAndHistory(); saveGameLocally();
+            if(showExplorer) updateExplorer(); // refresh explorer for start pos
         }
 
         function formatTime(sec) {
@@ -355,6 +378,21 @@
             isPaused ? $('#pauseModal').removeClass('hidden') : $('#pauseModal').addClass('hidden');
             updateClocks();
         }
+        
+        function resign() {
+            if (!gameActive || isPaused) return;
+            if (confirm("Are you sure you want to resign?")) {
+                var winner = game.turn() === 'w' ? 'Black' : 'White';
+                endGame(winner, "by Resignation");
+            }
+        }
+
+        function offerDraw() {
+            if (!gameActive || isPaused) return;
+            var playerOffering = game.turn() === 'w' ? 'White' : 'Black';
+            if (playMode === 'ai') alert("The Computer declines your draw offer. Play on!");
+            else if (confirm(playerOffering + " offers a draw. Does the opponent accept?")) endGame("Draw", "by mutual agreement");
+        }
 
         function endGame(winnerName, reason) {
             gameActive = false; clearInterval(timerInterval); updateClocks(); clearSave();
@@ -375,7 +413,7 @@
             history.forEach(m => { if(m.captured) { if(m.color === 'w') { capW[m.captured]++; scoreW += vals[m.captured]; } else { capB[m.captured]++; scoreB += vals[m.captured]; } } });
 
             function buildHtml(caps, colorPrefix) {
-                var h = ''; ['p','n','b','r','q'].forEach(p => { for(var i=0; i<caps[p]; i++) h += '<img src="https://chessboardjs.com/img/chesspieces/wikipedia/' + colorPrefix + p.toUpperCase() + '.png">'; }); return h;
+                var h = ''; ['p','n','b','r','q'].forEach(p => { for(var i=0; i<caps[p]; i++) h += '<img src="' + pieceBaseUrl + colorPrefix + p.toUpperCase() + '.png">'; }); return h;
             }
             var wHtml = buildHtml(capW, 'b'), bHtml = buildHtml(capB, 'w'); 
             if(scoreW > scoreB) wHtml += '<span class="score-advantage">+' + (scoreW - scoreB) + '</span>';
@@ -383,7 +421,60 @@
             $('#whiteCaptures').html(wHtml); $('#blackCaptures').html(bHtml);
         }
 
-        // --- ARTIFICIAL INTELLIGENCE ---
+        // --- NEW: LICHESS EXPLORER API LOGIC ---
+        function toggleExplorer() {
+            showExplorer = !showExplorer;
+            if(showExplorer) {
+                $('#explorerPanel').removeClass('hidden');
+                updateExplorer();
+            } else {
+                $('#explorerPanel').addClass('hidden');
+            }
+        }
+
+        function updateExplorer() {
+            if(!showExplorer || !gameActive) return;
+            var currentFen = game.fen();
+            $('#explorerContent').html('<div style="text-align:center; color:#888; padding: 10px;">Loading Master Database...</div>');
+            
+            // Fetching 100% Free Data from Lichess Open Source API
+            fetch('https://explorer.lichess.ovh/master?fen=' + encodeURIComponent(currentFen))
+                .then(res => res.json())
+                .then(data => {
+                    var html = '';
+                    if(data.moves && data.moves.length > 0) {
+                        // Get top 5 moves
+                        data.moves.slice(0, 5).forEach(m => {
+                            var total = m.white + m.draws + m.black;
+                            var wPct = (m.white / total) * 100;
+                            var dPct = (m.draws / total) * 100;
+                            var bPct = (m.black / total) * 100;
+                            
+                            html += '<div class="explore-row" onclick="playExplorerMove(\'' + m.san + '\')">' +
+                                    '<div class="move-san">' + m.san + '</div>' +
+                                    '<div class="move-games">' + total.toLocaleString() + '</div>' +
+                                    '<div class="move-bar">' +
+                                        '<div class="bar-w" style="width:'+wPct+'%"></div>' +
+                                        '<div class="bar-d" style="width:'+dPct+'%"></div>' +
+                                        '<div class="bar-b" style="width:'+bPct+'%"></div>' +
+                                    '</div></div>';
+                        });
+                    } else {
+                        html = '<div style="text-align:center; color:#aaa; font-size: 0.85rem; padding: 10px;">End of Opening Book. No master games found in this position.</div>';
+                    }
+                    $('#explorerContent').html(html);
+                })
+                .catch(err => {
+                    $('#explorerContent').html('<div style="text-align:center; color:#cc3333; font-size: 0.85rem; padding: 10px;">No internet connection for Explorer.</div>');
+                });
+        }
+
+        function playExplorerMove(sanMove) {
+            // Allows the user to click a move in the Explorer and play it instantly
+            if (playMode === 'ai' && game.turn() === 'b') return; // Don't let user play AI's turn
+            executeMove(sanMove); 
+        }
+
         function evaluateBoard(gameObj) {
             var totalEvaluation = 0;
             var pieceValues = { 'p': 10, 'n': 30, 'b': 30, 'r': 50, 'q': 90, 'k': 900 };
@@ -438,7 +529,7 @@
                 var bestMove = moves[Math.floor(Math.random() * moves.length)];
                 
                 if (depth === 1 && Math.random() > 0.5) {
-                    // Easy: Frequently plays random moves
+                    // Easy
                 } else {
                     var bestValue = 99999;
                     var alpha = -99999, beta = 99999;
@@ -488,6 +579,9 @@
                 else { playSound('move'); triggerHaptics('move'); }
 
                 updateStatus(); updateCapturesAndHistory(); saveGameLocally();
+                
+                if (showExplorer) updateExplorer(); // Update explorer list after move
+
                 if (playMode === 'ai' && game.turn() === 'b' && gameActive) makeComputerMove();
                 return true;
             }
@@ -503,6 +597,7 @@
             if (move) {
                 redoStack.push(move); board.position(game.fen());
                 removeHighlights(); selectedSquare = null; updateStatus(); updateCapturesAndHistory(); saveGameLocally();
+                if (showExplorer) updateExplorer();
             }
         }
 
@@ -516,7 +611,7 @@
             pendingMove = { from: source, to: target };
             var html = '';
             ['q', 'r', 'n', 'b'].forEach(function(p) {
-                var imgUrl = 'https://chessboardjs.com/img/chesspieces/wikipedia/' + color + p.toUpperCase() + '.png';
+                var imgUrl = pieceBaseUrl + color + p.toUpperCase() + '.png';
                 html += '<div class="promo-piece" onclick="finalizePromotion(\'' + p + '\')"><img src="' + imgUrl + '"></div>';
             });
             $('#promoContainer').html(html); $('#promotionModal').removeClass('hidden');
@@ -575,7 +670,7 @@
             }
         }
 
-        var config = { draggable: false, position: 'start', pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png' };
+        var config = { draggable: false, position: 'start', pieceTheme: pieceBaseUrl + '{piece}.png' };
         board = Chessboard('board', config); showSetup(); $(window).resize(board.resize);
     </script>
 </body>
