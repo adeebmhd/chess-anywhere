@@ -74,7 +74,6 @@
         .controls .btn:active { background-color: var(--accent-color); }
         .controls .btn:disabled { background-color: #222; color: #555; cursor: not-allowed; }
 
-        /* --- NEW EXPLORER PANEL UI --- */
         #explorerPanel {
             width: 95%; max-width: 400px; background: #1e1e1e; border-radius: 6px; padding: 10px;
             box-sizing: border-box; margin-bottom: 15px; color: #fff; font-family: 'Poppins', sans-serif;
@@ -236,7 +235,8 @@
         var redoStack = [], pendingMove = null, spinPieces = true, playMode = 'pvp';
         var showExplorer = false;
 
-        var pieceBaseUrl = 'https://raw.githubusercontent.com/oakmac/chessboardjs/master/img/chesspieces/wikipedia/';
+        // FIXED: Switched to ultra-reliable, high-resolution SVG pieces
+        var pieceBaseUrl = 'https://lichess1.org/assets/piece/cburnett/';
 
         function applyTheme(theme) {
             var root = document.documentElement;
@@ -339,7 +339,7 @@
             
             $('#setupModal').addClass('hidden');
             updateClocks(); startTimer(); updateStatus(); updateCapturesAndHistory(); saveGameLocally();
-            if(showExplorer) updateExplorer(); // refresh explorer for start pos
+            if(showExplorer) updateExplorer(); 
         }
 
         function formatTime(sec) {
@@ -412,8 +412,9 @@
             var vals = {p:1, n:3, b:3, r:5, q:9}, capW = {p:0,n:0,b:0,r:0,q:0}, capB = {p:0,n:0,b:0,r:0,q:0}, scoreW = 0, scoreB = 0;
             history.forEach(m => { if(m.captured) { if(m.color === 'w') { capW[m.captured]++; scoreW += vals[m.captured]; } else { capB[m.captured]++; scoreB += vals[m.captured]; } } });
 
+            // FIXED: Using high-res SVGs for the captured pieces area
             function buildHtml(caps, colorPrefix) {
-                var h = ''; ['p','n','b','r','q'].forEach(p => { for(var i=0; i<caps[p]; i++) h += '<img src="' + pieceBaseUrl + colorPrefix + p.toUpperCase() + '.png">'; }); return h;
+                var h = ''; ['p','n','b','r','q'].forEach(p => { for(var i=0; i<caps[p]; i++) h += '<img src="' + pieceBaseUrl + colorPrefix + p.toUpperCase() + '.svg">'; }); return h;
             }
             var wHtml = buildHtml(capW, 'b'), bHtml = buildHtml(capB, 'w'); 
             if(scoreW > scoreB) wHtml += '<span class="score-advantage">+' + (scoreW - scoreB) + '</span>';
@@ -421,7 +422,6 @@
             $('#whiteCaptures').html(wHtml); $('#blackCaptures').html(bHtml);
         }
 
-        // --- NEW: LICHESS EXPLORER API LOGIC ---
         function toggleExplorer() {
             showExplorer = !showExplorer;
             if(showExplorer) {
@@ -437,13 +437,11 @@
             var currentFen = game.fen();
             $('#explorerContent').html('<div style="text-align:center; color:#888; padding: 10px;">Loading Master Database...</div>');
             
-            // Fetching 100% Free Data from Lichess Open Source API
             fetch('https://explorer.lichess.ovh/master?fen=' + encodeURIComponent(currentFen))
                 .then(res => res.json())
                 .then(data => {
                     var html = '';
                     if(data.moves && data.moves.length > 0) {
-                        // Get top 5 moves
                         data.moves.slice(0, 5).forEach(m => {
                             var total = m.white + m.draws + m.black;
                             var wPct = (m.white / total) * 100;
@@ -470,8 +468,7 @@
         }
 
         function playExplorerMove(sanMove) {
-            // Allows the user to click a move in the Explorer and play it instantly
-            if (playMode === 'ai' && game.turn() === 'b') return; // Don't let user play AI's turn
+            if (playMode === 'ai' && game.turn() === 'b') return; 
             executeMove(sanMove); 
         }
 
@@ -580,7 +577,7 @@
 
                 updateStatus(); updateCapturesAndHistory(); saveGameLocally();
                 
-                if (showExplorer) updateExplorer(); // Update explorer list after move
+                if (showExplorer) updateExplorer(); 
 
                 if (playMode === 'ai' && game.turn() === 'b' && gameActive) makeComputerMove();
                 return true;
@@ -607,11 +604,12 @@
             if (playMode === 'ai' && redoStack.length > 0) executeMove(redoStack.pop());
         }
 
+        // FIXED: Using high-res SVGs for the promotion menu
         function triggerPromotionUI(source, target, color) {
             pendingMove = { from: source, to: target };
             var html = '';
             ['q', 'r', 'n', 'b'].forEach(function(p) {
-                var imgUrl = pieceBaseUrl + color + p.toUpperCase() + '.png';
+                var imgUrl = pieceBaseUrl + color + p.toUpperCase() + '.svg';
                 html += '<div class="promo-piece" onclick="finalizePromotion(\'' + p + '\')"><img src="' + imgUrl + '"></div>';
             });
             $('#promoContainer').html(html); $('#promotionModal').removeClass('hidden');
@@ -670,7 +668,8 @@
             }
         }
 
-        var config = { draggable: false, position: 'start', pieceTheme: pieceBaseUrl + '{piece}.png' };
+        // FIXED: Board uses the premium .svg format
+        var config = { draggable: false, position: 'start', pieceTheme: pieceBaseUrl + '{piece}.svg' };
         board = Chessboard('board', config); showSetup(); $(window).resize(board.resize);
     </script>
 </body>
