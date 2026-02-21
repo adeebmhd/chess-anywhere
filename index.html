@@ -15,6 +15,7 @@
             --text-color: #ffffff;
             --accent-color: #739552; /* Chess.com Green */
             --light-square: #ebecd0; /* Chess.com White/Cream */
+            --highlight: rgba(235, 226, 75, 0.7); /* Chess.com Yellow Selection */
         }
         
         body {
@@ -47,6 +48,11 @@
             margin-bottom: 20px;
             box-shadow: 0 8px 16px rgba(0,0,0,0.8);
             border-radius: 4px;
+            
+            /* CRITICAL FIX: Stops the page from scrolling when you tap the board */
+            touch-action: none; 
+            user-select: none;
+            -webkit-user-select: none;
         }
 
         /* Overriding default board colors to match Chess.com */
@@ -54,7 +60,15 @@
         .black-3c85d { background-color: var(--accent-color) !important; color: var(--light-square) !important; }
         
         /* Ensure squares can hold the absolute positioned dots */
-        .square-55d63 { position: relative; }
+        .square-55d63 { 
+            position: relative; 
+            cursor: pointer;
+        }
+
+        /* Highlight for the currently selected piece */
+        .highlight-selected {
+            background-color: var(--highlight) !important;
+        }
 
         /* Dot for empty square moves */
         .highlight-dot::after {
@@ -141,7 +155,7 @@
         var selectedSquare = null;
 
         function removeHighlights() {
-            $('#board .square-55d63').removeClass('highlight-dot highlight-capture');
+            $('#board .square-55d63').removeClass('highlight-dot highlight-capture highlight-selected');
         }
 
         function showMoves(square) {
@@ -160,17 +174,20 @@
             }
         }
 
+        // Tap-to-move logic
         $('#board').on('click', '.square-55d63', function() {
             var square = $(this).attr('data-square');
             var piece = game.get(square);
 
+            // If a piece is already selected, try to move to the tapped square
             if (selectedSquare) {
                 var move = game.move({
                     from: selectedSquare,
                     to: square,
-                    promotion: 'q'
+                    promotion: 'q' // Auto-promote to queen
                 });
 
+                // If the move is valid, execute it
                 if (move) {
                     board.position(game.fen());
                     removeHighlights();
@@ -180,50 +197,25 @@
                 }
             }
 
+            // If you tap the already selected piece, deselect it
             if (selectedSquare === square) {
                 selectedSquare = null;
                 removeHighlights();
                 return;
             }
 
+            // Clear previous highlights
             removeHighlights();
 
+            // If you tap one of your own pieces, select it and show moves
             if (piece && piece.color === game.turn()) {
                 selectedSquare = square;
+                $(this).addClass('highlight-selected'); // Yellow background on tapped piece
                 showMoves(square);
             } else {
                 selectedSquare = null;
             }
         });
-
-        function onDragStart (source, piece, position, orientation) {
-            selectedSquare = null;
-            removeHighlights();
-
-            if (game.game_over()) return false;
-            if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
-                (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
-                return false;
-            }
-            
-            showMoves(source);
-        }
-
-        function onDrop (source, target) {
-            removeHighlights();
-            var move = game.move({
-                from: source,
-                to: target,
-                promotion: 'q'
-            });
-
-            if (move === null) return 'snapback';
-            updateStatus();
-        }
-
-        function onSnapEnd () {
-            board.position(game.fen());
-        }
 
         function updateStatus () {
             var statusHTML = '';
@@ -242,13 +234,10 @@
             $status.html(statusHTML);
         }
 
-        // Initialize Board with reliable, high-res open-source pieces
+        // Initialize Board - Notice draggable is strictly FALSE now
         var config = {
-            draggable: true,
+            draggable: false, 
             position: 'start',
-            onDragStart: onDragStart,
-            onDrop: onDrop,
-            onSnapEnd: onSnapEnd,
             pieceTheme: 'https://lichess1.org/assets/piece/cburnett/{piece}.svg'
         };
         
