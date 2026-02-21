@@ -13,7 +13,7 @@
         :root {
             --bg-color: #121212;
             --text-color: #ffffff;
-            --accent-color: #739552; 
+            --accent-color: #739552; /* Default Classic Green */
             --light-square: #ebecd0; 
             --highlight: rgba(235, 226, 75, 0.7); 
             --clock-bg: #2c2c2c;
@@ -23,12 +23,7 @@
             font-family: 'Poppins', sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            overflow-x: hidden;
+            margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; overflow-x: hidden;
         }
 
         header { margin-top: 15px; margin-bottom: 5px; text-align: center; }
@@ -52,11 +47,17 @@
             touch-action: none; user-select: none; -webkit-user-select: none; margin-bottom: 8px;
         }
 
+        /* Themed Colors */
         .white-1e1d7 { background-color: var(--light-square) !important; color: var(--accent-color) !important; }
         .black-3c85d { background-color: var(--accent-color) !important; color: var(--light-square) !important; }
         
+        /* Piece Spinning & Highlights */
+        #board img { transition: transform 0.4s ease; } /* Smooth rotation for pieces */
+        #board.spin-pieces img { transform: rotate(180deg); }
+        
         .square-55d63 { position: relative; cursor: pointer; }
         .highlight-selected { background-color: var(--highlight) !important; }
+        .last-move { background-color: rgba(235, 226, 75, 0.4) !important; } /* Faint glow for last move */
 
         .highlight-dot::after {
             content: ''; position: absolute; top: 50%; left: 50%; width: 25%; height: 25%;
@@ -85,7 +86,7 @@
 
         .menu { display: flex; width: 95%; max-width: 400px; margin-bottom: 20px; justify-content: center; gap: 10px;}
         .btn {
-            background-color: var(--accent-color); color: white; border: none; padding: 12px 20px;
+            background-color: var(--accent-color); color: white; border: none; padding: 12px 10px;
             font-size: 1rem; border-radius: 8px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 600; width: 100%;
         }
 
@@ -101,7 +102,7 @@
         }
         .modal-title { font-size: 1.5rem; font-weight: 700; margin-top: 0; margin-bottom: 15px; color: var(--accent-color); }
         
-        .mode-select { margin-bottom: 15px; padding: 10px; width: 100%; background: #333; color: white; border: none; border-radius: 8px; font-family: 'Poppins'; font-size: 1rem;}
+        .mode-select { margin-bottom: 10px; padding: 10px; width: 100%; background: #333; color: white; border: none; border-radius: 8px; font-family: 'Poppins'; font-size: 0.95rem;}
         
         .time-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;}
         .time-btn { background: #333; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 0.9rem; font-family: 'Poppins'; cursor: pointer; font-weight: 600; }
@@ -126,10 +127,25 @@
     <div id="setupModal" class="modal-overlay">
         <div class="modal-content">
             <h2 class="modal-title">Game Setup</h2>
+            
+            <select id="themeSelect" class="mode-select" onchange="applyTheme(this.value)">
+                <option value="classic">Theme: Classic Green</option>
+                <option value="walnut">Theme: Walnut Wood</option>
+                <option value="midnight">Theme: Midnight Blue</option>
+                <option value="bubblegum">Theme: Bubblegum</option>
+            </select>
+
             <select id="gameMode" class="mode-select">
                 <option value="pvp">Pass & Play (2 Players)</option>
                 <option value="ai">Play vs Computer (AI)</option>
             </select>
+            
+            <select id="aiDifficulty" class="mode-select hidden">
+                <option value="1">AI Difficulty: Easy</option>
+                <option value="2">AI Difficulty: Medium</option>
+                <option value="3">AI Difficulty: Hard</option>
+            </select>
+
             <div class="time-options">
                 <button class="time-btn" onclick="startGame(180)">Blitz (3 min)</button>
                 <button class="time-btn" onclick="startGame(300)">Blitz (5 min)</button>
@@ -137,8 +153,8 @@
                 <button class="time-btn" onclick="startGame(0)">Unlimited</button>
             </div>
             <div class="settings-row" id="flipSettingRow">
-                <input type="checkbox" id="autoFlipCheck" checked>
-                <label for="autoFlipCheck">Auto-Flip Board</label>
+                <input type="checkbox" id="spinPiecesCheck" checked>
+                <label for="spinPiecesCheck">Spin pieces for opponent</label>
             </div>
             <button id="resumeBtn" class="btn hidden" style="background:#444; margin-top:5px;" onclick="resumeGame()">Resume Game</button>
         </div>
@@ -177,7 +193,11 @@
     </div>
 
     <div class="history-box" id="moveHistory"></div>
-    <div class="menu"><button class="btn" style="background: #333;" onclick="showSetup()">New Game / Restart</button></div>
+    
+    <div class="menu">
+        <button class="btn" style="background: #333;" onclick="showSetup()">Setup</button>
+        <button class="btn" onclick="copyPGN()">Export PGN</button>
+    </div>
 
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
@@ -185,13 +205,26 @@
     <script>
         var board = null, game = new Chess(), $status = $('#status'), selectedSquare = null;
         var timeLimit = 0, timeW = 0, timeB = 0, timerInterval = null, gameActive = false, isPaused = false;
-        var redoStack = [], pendingMove = null, autoFlip = true, playMode = 'pvp';
+        var redoStack = [], pendingMove = null, spinPieces = true, playMode = 'pvp';
 
-        // Auto-disable Auto-Flip if AI is selected
+        // --- THEMES & UI ---
+        function applyTheme(theme) {
+            var root = document.documentElement;
+            if(theme === 'classic') { root.style.setProperty('--accent-color', '#739552'); root.style.setProperty('--light-square', '#ebecd0'); }
+            if(theme === 'walnut') { root.style.setProperty('--accent-color', '#764223'); root.style.setProperty('--light-square', '#e0c4a3'); }
+            if(theme === 'midnight') { root.style.setProperty('--accent-color', '#4A6984'); root.style.setProperty('--light-square', '#B0C4DE'); }
+            if(theme === 'bubblegum') { root.style.setProperty('--accent-color', '#d65a88'); root.style.setProperty('--light-square', '#f2c9d8'); }
+        }
+
         $('#gameMode').on('change', function() {
-            if (this.value === 'ai') { $('#autoFlipCheck').prop('checked', false); $('#flipSettingRow').hide(); } 
-            else { $('#flipSettingRow').show(); }
+            if (this.value === 'ai') { $('#spinPiecesCheck').prop('checked', false); $('#flipSettingRow').hide(); $('#aiDifficulty').show(); } 
+            else { $('#flipSettingRow').show(); $('#aiDifficulty').hide(); }
         });
+
+        function copyPGN() {
+            if(game.pgn().length === 0) return alert("No moves to export yet!");
+            navigator.clipboard.writeText(game.pgn()).then(() => alert("Game copied to clipboard! Paste it into Chess.com or Lichess to analyze."));
+        }
 
         // --- AUDIO & HAPTICS ---
         var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -217,7 +250,10 @@
         // --- GAME SAVING ---
         function saveGameLocally() {
             if(!gameActive) return;
-            localStorage.setItem('chessSave', JSON.stringify({ fen: game.fen(), pgn: game.pgn(), timeW: timeW, timeB: timeB, timeLimit: timeLimit, autoFlip: autoFlip, mode: playMode }));
+            localStorage.setItem('chessSave', JSON.stringify({ 
+                fen: game.fen(), pgn: game.pgn(), timeW: timeW, timeB: timeB, timeLimit: timeLimit, 
+                spinPieces: spinPieces, mode: playMode, theme: $('#themeSelect').val(), diff: $('#aiDifficulty').val() 
+            }));
         }
         function clearSave() { localStorage.removeItem('chessSave'); }
         function checkSave() { localStorage.getItem('chessSave') ? $('#resumeBtn').removeClass('hidden') : $('#resumeBtn').addClass('hidden'); }
@@ -226,12 +262,17 @@
             var save = JSON.parse(localStorage.getItem('chessSave'));
             if(save) {
                 game.load_pgn(save.pgn); timeLimit = save.timeLimit; timeW = save.timeW; timeB = save.timeB;
-                autoFlip = save.autoFlip; playMode = save.mode; $('#autoFlipCheck').prop('checked', autoFlip);
+                spinPieces = save.spinPieces; playMode = save.mode; 
+                
+                $('#spinPiecesCheck').prop('checked', spinPieces);
                 $('#gameMode').val(playMode).change();
+                $('#themeSelect').val(save.theme).change();
+                $('#aiDifficulty').val(save.diff);
+
                 board.position(game.fen()); redoStack = []; gameActive = true; isPaused = false;
                 $('#setupModal').addClass('hidden');
-                if(autoFlip && playMode === 'pvp') board.orientation(game.turn() === 'w' ? 'white' : 'black');
-                updateClocks(); startTimer(); updateStatus(); updateCapturesAndHistory();
+                
+                updateClocks(); updateStatus(); updateCapturesAndHistory();
                 if(playMode === 'ai' && game.turn() === 'b') setTimeout(makeComputerMove, 500);
             }
         }
@@ -241,11 +282,11 @@
         function startGame(seconds) {
             if(audioCtx.state === 'suspended') audioCtx.resume();
             timeLimit = seconds; timeW = seconds; timeB = seconds;
-            playMode = $('#gameMode').val(); autoFlip = $('#autoFlipCheck').is(':checked');
+            playMode = $('#gameMode').val(); spinPieces = $('#spinPiecesCheck').is(':checked');
             
             $('#blackLabel').text(playMode === 'ai' ? 'Black (Computer)' : 'Black');
             
-            game.reset(); board.start(); board.orientation('white');
+            game.reset(); board.start(); 
             selectedSquare = null; removeHighlights(); redoStack = [];
             gameActive = true; isPaused = false;
             
@@ -253,7 +294,6 @@
             updateClocks(); startTimer(); updateStatus(); updateCapturesAndHistory(); saveGameLocally();
         }
 
-        // --- CLOCKS ---
         function formatTime(sec) {
             if (sec <= 0) return "00:00";
             var m = Math.floor(sec / 60), s = sec % 60;
@@ -297,7 +337,6 @@
             $('#winReason').text(reason); $('#gameOverModal').removeClass('hidden');
         }
 
-        // --- UI UPDATES ---
         function updateCapturesAndHistory() {
             var history = game.history({ verbose: true });
             var pgnArr = game.pgn().split(' '), historyHtml = '';
@@ -319,7 +358,7 @@
             $('#whiteCaptures').html(wHtml); $('#blackCaptures').html(bHtml);
         }
 
-        // --- ARTIFICIAL INTELLIGENCE (MINIMAX) ---
+        // --- ARTIFICIAL INTELLIGENCE ---
         function evaluateBoard(gameObj) {
             var totalEvaluation = 0;
             var pieceValues = { 'p': 10, 'n': 30, 'b': 30, 'r': 50, 'q': 90, 'k': 900 };
@@ -334,37 +373,86 @@
             return totalEvaluation;
         }
 
+        function minimax(gameObj, depth, alpha, beta, isMaximizing) {
+            if (depth === 0 || gameObj.game_over()) return evaluateBoard(gameObj);
+            var moves = gameObj.moves();
+            if (isMaximizing) {
+                var maxEval = -99999;
+                for (var i = 0; i < moves.length; i++) {
+                    gameObj.move(moves[i]);
+                    var ev = minimax(gameObj, depth - 1, alpha, beta, false);
+                    gameObj.undo();
+                    maxEval = Math.max(maxEval, ev);
+                    alpha = Math.max(alpha, ev);
+                    if (beta <= alpha) break;
+                }
+                return maxEval;
+            } else {
+                var minEval = 99999;
+                for (var i = 0; i < moves.length; i++) {
+                    gameObj.move(moves[i]);
+                    var ev = minimax(gameObj, depth - 1, alpha, beta, true);
+                    gameObj.undo();
+                    minEval = Math.min(minEval, ev);
+                    beta = Math.min(beta, ev);
+                    if (beta <= alpha) break;
+                }
+                return minEval;
+            }
+        }
+
         function makeComputerMove() {
             if (!gameActive || game.turn() === 'w') return;
             $status.html('Computer is thinking...').addClass('ai-thinking');
             
             setTimeout(function() {
-                var possibleMoves = game.moves();
-                if (possibleMoves.length === 0) return;
+                var moves = game.moves();
+                if (moves.length === 0) return;
 
-                // Simple AI: Greedily pick the best material move, or random.
-                var bestMove = null;
-                var bestValue = 9999; // Black wants lowest score
+                var depth = parseInt($('#aiDifficulty').val());
+                var bestMove = moves[Math.floor(Math.random() * moves.length)];
                 
-                // Shuffle moves to add variety
-                possibleMoves.sort(() => Math.random() - 0.5);
-
-                for (var i = 0; i < possibleMoves.length; i++) {
-                    game.move(possibleMoves[i]);
-                    var boardValue = evaluateBoard(game);
-                    if (boardValue < bestValue) {
-                        bestValue = boardValue;
-                        bestMove = possibleMoves[i];
+                if (depth === 1 && Math.random() > 0.5) {
+                    // Easy: Frequently plays random moves
+                } else {
+                    var bestValue = 99999;
+                    var alpha = -99999, beta = 99999;
+                    moves.sort(() => Math.random() - 0.5); // Add variety
+                    
+                    for (var i = 0; i < moves.length; i++) {
+                        game.move(moves[i]);
+                        var boardValue = minimax(game, depth - 1, alpha, beta, true); // Evaluate as White's turn
+                        game.undo();
+                        if (boardValue < bestValue) {
+                            bestValue = boardValue;
+                            bestMove = moves[i];
+                        }
+                        beta = Math.min(beta, boardValue);
                     }
-                    game.undo();
                 }
-
-                executeMove(bestMove || possibleMoves[0]);
+                executeMove(bestMove);
                 $status.removeClass('ai-thinking');
-            }, 250); // slight delay to feel natural
+            }, 100);
         }
 
-        // --- MOVE EXECUTION ---
+        function updateLastMoveHighlight() {
+            $('#board .square-55d63').removeClass('last-move');
+            var history = game.history({verbose: true});
+            if(history.length > 0) {
+                var last = history[history.length - 1];
+                $('#board .square-' + last.from).addClass('last-move');
+                $('#board .square-' + last.to).addClass('last-move');
+            }
+        }
+
+        function handlePieceSpin() {
+            if (spinPieces && playMode === 'pvp' && game.turn() === 'b') {
+                $('#board').addClass('spin-pieces');
+            } else {
+                $('#board').removeClass('spin-pieces');
+            }
+        }
+
         function executeMove(moveObj) {
             var move = game.move(moveObj);
             if (move) {
@@ -375,9 +463,7 @@
                 else { playSound('move'); triggerHaptics('move'); }
 
                 updateStatus(); updateCapturesAndHistory(); saveGameLocally();
-
-                if (playMode === 'pvp' && autoFlip && gameActive) { setTimeout(() => { board.orientation(game.turn() === 'w' ? 'white' : 'black'); }, 400); }
-                else if (playMode === 'ai' && game.turn() === 'b' && gameActive) { makeComputerMove(); }
+                if (playMode === 'ai' && game.turn() === 'b' && gameActive) makeComputerMove();
                 return true;
             }
             return false;
@@ -387,11 +473,10 @@
             if (!gameActive || isPaused) return;
             var move = game.undo();
             if (playMode === 'ai' && move && game.turn() === 'b') { 
-                redoStack.push(move); move = game.undo(); // Undo AI's move too
+                redoStack.push(move); move = game.undo(); 
             }
             if (move) {
                 redoStack.push(move); board.position(game.fen());
-                if(playMode === 'pvp' && autoFlip) board.orientation(game.turn() === 'w' ? 'white' : 'black');
                 removeHighlights(); selectedSquare = null; updateStatus(); updateCapturesAndHistory(); saveGameLocally();
             }
         }
@@ -402,7 +487,6 @@
             if (playMode === 'ai' && redoStack.length > 0) executeMove(redoStack.pop());
         }
 
-        // --- PROMOTION & TAP LOGIC ---
         function triggerPromotionUI(source, target, color) {
             pendingMove = { from: source, to: target };
             var html = '';
@@ -420,6 +504,7 @@
         };
 
         function removeHighlights() { $('#board .square-55d63').removeClass('highlight-dot highlight-capture highlight-selected'); }
+        
         function showMoves(square) {
             game.moves({ square: square, verbose: true }).forEach(m => {
                 var $sq = $('#board .square-' + m.to);
@@ -428,7 +513,7 @@
         }
 
         $('#board').on('click', '.square-55d63', function() {
-            if (!gameActive || isPaused || (playMode === 'ai' && game.turn() === 'b')) return; // Block input if AI's turn
+            if (!gameActive || isPaused || (playMode === 'ai' && game.turn() === 'b')) return; 
             var square = $(this).attr('data-square'), piece = game.get(square);
 
             if (selectedSquare) {
@@ -447,15 +532,19 @@
         function updateStatus () {
             if (!gameActive) return;
             var moveColor = game.turn() === 'b' ? 'Black' : 'White';
+            
             $('#undoBtn').prop('disabled', game.history().length === 0);
             $('#redoBtn').prop('disabled', redoStack.length === 0);
+
+            updateLastMoveHighlight();
+            handlePieceSpin();
 
             if (game.in_checkmate()) { endGame(moveColor === 'White' ? 'Black' : 'White', "by Checkmate"); $status.html('Checkmate!').removeClass('ai-thinking'); } 
             else if (game.in_draw()) { endGame("Draw", "by rules of chess"); $status.html('Draw').removeClass('ai-thinking'); } 
             else {
                 var statusHTML = moveColor + ' to move';
                 if (game.in_check()) statusHTML += ' (Check!)';
-                if (playMode === 'ai' && game.turn() === 'b') return; // AI status handled separately
+                if (playMode === 'ai' && game.turn() === 'b') return; 
                 $status.html(statusHTML).removeClass('ai-thinking');
                 updateClocks(); 
             }
