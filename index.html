@@ -31,50 +31,28 @@
             overflow-x: hidden;
         }
 
-        header {
-            margin-top: 20px;
-            margin-bottom: 10px;
-            text-align: center;
-        }
+        header { margin-top: 15px; margin-bottom: 5px; text-align: center; }
+        h1 { margin: 0; font-size: 2rem; color: var(--accent-color); text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
 
-        h1 {
-            margin: 0;
-            font-size: 2.2rem;
-            color: var(--accent-color);
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        /* Player Info Areas (Clocks + Captures) */
+        .player-info {
+            width: 95%; max-width: 400px; display: flex; flex-direction: column; margin-bottom: 8px;
         }
-
-        .clock-container {
-            width: 95%;
-            max-width: 400px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
+        .clock-container { display: flex; justify-content: space-between; align-items: center; }
         .clock {
-            background-color: var(--clock-bg);
-            padding: 8px 15px;
-            border-radius: 6px;
-            font-size: 1.5rem;
-            font-weight: 700;
-            font-family: monospace;
-            color: #ccc;
-            transition: 0.3s;
+            background-color: var(--clock-bg); padding: 5px 12px; border-radius: 6px;
+            font-size: 1.3rem; font-weight: 700; font-family: monospace; color: #ccc; transition: 0.3s;
         }
-
         .clock.active { background-color: #ffffff; color: #000000; }
         .clock.low-time { background-color: #cc3333; color: #ffffff; }
+        
+        .captures { min-height: 24px; display: flex; align-items: center; gap: 2px; font-size: 0.8rem; color: #888; margin-top: 2px;}
+        .captures img { width: 18px; height: 18px; }
+        .score-advantage { color: var(--accent-color); font-weight: 600; margin-left: 5px; }
 
         #board {
-            width: 95%;
-            max-width: 400px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.8);
-            border-radius: 4px;
-            touch-action: none; 
-            user-select: none;
-            -webkit-user-select: none;
+            width: 95%; max-width: 400px; box-shadow: 0 8px 16px rgba(0,0,0,0.8); border-radius: 4px;
+            touch-action: none; user-select: none; -webkit-user-select: none; margin-bottom: 8px;
         }
 
         .white-1e1d7 { background-color: var(--light-square) !important; color: var(--accent-color) !important; }
@@ -93,55 +71,50 @@
             border: 6px solid rgba(0, 0, 0, 0.25); border-radius: 50%; transform: translate(-50%, -50%); box-sizing: border-box; pointer-events: none;
         }
 
-        #status { font-weight: 600; font-size: 1.1rem; margin-top: 15px; margin-bottom: 10px; color: var(--light-square); text-align: center;}
+        #status { font-weight: 600; font-size: 1rem; margin-bottom: 10px; color: var(--light-square); text-align: center;}
 
-        /* --- CONTROL PANEL --- */
-        .controls {
-            display: flex;
-            justify-content: space-between;
-            width: 95%;
-            max-width: 400px;
-            margin-bottom: 15px;
-            gap: 10px;
-        }
-
-        .controls .btn {
-            flex: 1;
-            background-color: #333;
-            font-size: 0.9rem;
-            padding: 10px;
-        }
-        
+        /* Controls & History */
+        .controls { display: flex; justify-content: space-between; width: 95%; max-width: 400px; margin-bottom: 10px; gap: 8px; }
+        .controls .btn { flex: 1; background-color: #333; font-size: 0.85rem; padding: 8px; }
         .controls .btn:active { background-color: var(--accent-color); }
         .controls .btn:disabled { background-color: #222; color: #555; cursor: not-allowed; }
 
-        .menu { display: flex; width: 95%; max-width: 400px; margin-bottom: 20px; justify-content: center; }
+        .history-box {
+            width: 95%; max-width: 400px; background: #1e1e1e; border-radius: 6px; padding: 10px;
+            box-sizing: border-box; height: 80px; overflow-y: auto; font-family: monospace; font-size: 0.9rem;
+            color: #aaa; margin-bottom: 15px; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 8px;
+        }
+        .history-move { background: #2c2c2c; padding: 2px 6px; border-radius: 4px; }
+        .history-move.active { background: var(--accent-color); color: white; }
+
+        .menu { display: flex; width: 95%; max-width: 400px; margin-bottom: 20px; justify-content: center; gap: 10px;}
 
         .btn {
             background-color: var(--accent-color); color: white; border: none; padding: 12px 20px;
-            font-size: 1.1rem; border-radius: 8px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 600; width: 100%;
+            font-size: 1rem; border-radius: 8px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 600; width: 100%;
         }
 
-        /* --- MODALS --- */
+        /* Modals */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0, 0, 0, 0.85); display: flex; justify-content: center; align-items: center;
             z-index: 1000; flex-direction: column;
         }
-
         .modal-content {
-            background: #1e1e1e; padding: 30px; border-radius: 12px; text-align: center; max-width: 350px; width: 80%;
+            background: #1e1e1e; padding: 25px; border-radius: 12px; text-align: center; max-width: 350px; width: 85%;
             box-shadow: 0 10px 25px rgba(0,0,0,0.5);
         }
-
-        .modal-title { font-size: 1.8rem; font-weight: 700; margin-top: 0; margin-bottom: 20px; color: var(--accent-color); }
+        .modal-title { font-size: 1.5rem; font-weight: 700; margin-top: 0; margin-bottom: 15px; color: var(--accent-color); }
         
-        .time-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .time-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;}
         .time-btn {
-            background: #333; color: white; border: none; padding: 15px; border-radius: 8px;
-            font-size: 1rem; font-family: 'Poppins'; cursor: pointer; font-weight: 600;
+            background: #333; color: white; border: none; padding: 12px; border-radius: 8px;
+            font-size: 0.9rem; font-family: 'Poppins'; cursor: pointer; font-weight: 600;
         }
         .time-btn:active { background: var(--accent-color); }
+        
+        .settings-row { display: flex; justify-content: center; align-items: center; gap: 10px; font-size: 0.9rem; margin-bottom: 15px; color: #ccc;}
+        input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent-color); }
 
         .promo-pieces { display: flex; justify-content: space-around; margin-top: 20px; }
         .promo-piece {
@@ -160,20 +133,23 @@
     <div id="setupModal" class="modal-overlay">
         <div class="modal-content">
             <h2 class="modal-title">Game Setup</h2>
-            <p>Select Time Control</p>
             <div class="time-options">
                 <button class="time-btn" onclick="startGame(180)">Blitz (3 min)</button>
                 <button class="time-btn" onclick="startGame(300)">Blitz (5 min)</button>
                 <button class="time-btn" onclick="startGame(600)">Rapid (10 min)</button>
                 <button class="time-btn" onclick="startGame(0)">Unlimited</button>
             </div>
+            <div class="settings-row">
+                <input type="checkbox" id="autoFlipCheck" checked>
+                <label for="autoFlipCheck">Auto-Flip Board after moves</label>
+            </div>
+            <button id="resumeBtn" class="btn hidden" style="background:#444; margin-top:5px;" onclick="resumeGame()">Resume Previous Game</button>
         </div>
     </div>
 
     <div id="pauseModal" class="modal-overlay hidden">
         <div class="modal-content">
             <h2 class="modal-title" style="color: white;">Game Paused</h2>
-            <p>The timer is stopped.</p>
             <button class="btn" onclick="togglePause()">Resume Game</button>
         </div>
     </div>
@@ -193,20 +169,24 @@
         </div>
     </div>
 
-    <header>
-        <h1>Chess Anywhere</h1>
-    </header>
+    <header><h1>Chess Anywhere</h1></header>
 
-    <div class="clock-container">
-        <div style="font-weight: 600; color: #aaa;">Black</div>
-        <div id="blackClock" class="clock">00:00</div>
+    <div class="player-info">
+        <div class="clock-container">
+            <div style="font-weight: 600; color: #aaa;">Black</div>
+            <div id="blackClock" class="clock">00:00</div>
+        </div>
+        <div class="captures" id="blackCaptures"></div>
     </div>
 
     <div id="board"></div>
 
-    <div class="clock-container">
-        <div style="font-weight: 600; color: #aaa;">White</div>
-        <div id="whiteClock" class="clock">00:00</div>
+    <div class="player-info">
+        <div class="captures" id="whiteCaptures"></div>
+        <div class="clock-container">
+            <div style="font-weight: 600; color: #aaa;">White</div>
+            <div id="whiteClock" class="clock">00:00</div>
+        </div>
     </div>
     
     <div id="status">White to move</div>
@@ -217,8 +197,10 @@
         <button class="btn" id="redoBtn" onclick="redoMove()">⟳ Redo</button>
     </div>
 
+    <div class="history-box" id="moveHistory"></div>
+
     <div class="menu">
-        <button class="btn" onclick="showSetup()">New Game / Restart</button>
+        <button class="btn" style="background: #333;" onclick="showSetup()">New Game / Restart</button>
     </div>
 
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
@@ -230,35 +212,118 @@
         var $status = $('#status');
         var selectedSquare = null;
 
-        // Game State Variables
-        var timeLimit = 0; 
-        var timeW = 0;
-        var timeB = 0;
-        var timerInterval = null;
-        var gameActive = false;
-        var isPaused = false;
-        var redoStack = []; // Stores undone moves for redoing
-        var pendingMove = null;
+        var timeLimit = 0, timeW = 0, timeB = 0;
+        var timerInterval = null, gameActive = false, isPaused = false;
+        var redoStack = [], pendingMove = null, autoFlip = true;
 
-        // --- CLOCK LOGIC ---
-        function formatTime(seconds) {
-            if (seconds <= 0) return "00:00";
-            var m = Math.floor(seconds / 60);
-            var s = seconds % 60;
+        // Audio Context for reliable Synth Sounds
+        var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(type) {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            try {
+                var osc = audioCtx.createOscillator();
+                var gainNode = audioCtx.createGain();
+                osc.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                if (type === 'move') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.1);
+                    gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                } else if (type === 'capture') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.15);
+                    gainNode.gain.setValueAtTime(0.8, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                } else if (type === 'check') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(500, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.2);
+                    gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                }
+                
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.2);
+            } catch(e) {}
+        }
+
+        function triggerHaptics(type) {
+            if (navigator.vibrate) {
+                if(type === 'move') navigator.vibrate(40);
+                if(type === 'capture' || type === 'check') navigator.vibrate([40, 50, 40]);
+            }
+        }
+
+        function saveGameLocally() {
+            if(!gameActive) return;
+            var saveObj = {
+                fen: game.fen(), pgn: game.pgn(),
+                timeW: timeW, timeB: timeB, timeLimit: timeLimit,
+                autoFlip: autoFlip
+            };
+            localStorage.setItem('chessSave', JSON.stringify(saveObj));
+        }
+
+        function clearSave() { localStorage.removeItem('chessSave'); }
+
+        function checkSave() {
+            if(localStorage.getItem('chessSave')) $('#resumeBtn').removeClass('hidden');
+            else $('#resumeBtn').addClass('hidden');
+        }
+
+        function resumeGame() {
+            var save = JSON.parse(localStorage.getItem('chessSave'));
+            if(save) {
+                game.load_pgn(save.pgn);
+                timeLimit = save.timeLimit; timeW = save.timeW; timeB = save.timeB;
+                autoFlip = save.autoFlip; $('#autoFlipCheck').prop('checked', autoFlip);
+                
+                board.position(game.fen());
+                redoStack = []; gameActive = true; isPaused = false;
+                $('#setupModal').addClass('hidden');
+                
+                if(autoFlip) board.orientation(game.turn() === 'w' ? 'white' : 'black');
+                
+                updateClocks(); startTimer(); updateStatus(); updateCapturesAndHistory();
+            }
+        }
+
+        function showSetup() {
+            $('#gameOverModal').addClass('hidden');
+            checkSave();
+            $('#setupModal').removeClass('hidden');
+        }
+
+        function startGame(seconds) {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            timeLimit = seconds; timeW = seconds; timeB = seconds;
+            autoFlip = $('#autoFlipCheck').is(':checked');
+            
+            game.reset(); board.start(); board.orientation('white');
+            selectedSquare = null; removeHighlights(); redoStack = [];
+            gameActive = true; isPaused = false;
+            
+            $('#setupModal').addClass('hidden');
+            updateClocks(); startTimer(); updateStatus(); updateCapturesAndHistory();
+            saveGameLocally();
+        }
+
+        // --- CLOCKS ---
+        function formatTime(sec) {
+            if (sec <= 0) return "00:00";
+            var m = Math.floor(sec / 60), s = sec % 60;
             return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
         }
 
         function updateClocks() {
-            if (timeLimit === 0) {
-                $('#whiteClock, #blackClock').text("∞");
-                return;
-            }
-            $('#whiteClock').text(formatTime(timeW));
-            $('#blackClock').text(formatTime(timeB));
-
-            $('#whiteClock').removeClass('active low-time');
-            $('#blackClock').removeClass('active low-time');
-            
+            if (timeLimit === 0) { $('#whiteClock, #blackClock').text("∞"); return; }
+            $('#whiteClock').text(formatTime(timeW)); $('#blackClock').text(formatTime(timeB));
+            $('#whiteClock, #blackClock').removeClass('active low-time');
             if (gameActive && !isPaused) {
                 if (game.turn() === 'w') {
                     $('#whiteClock').addClass('active');
@@ -273,215 +338,189 @@
         function startTimer() {
             if (timeLimit === 0) return; 
             if (timerInterval) clearInterval(timerInterval);
-            
             timerInterval = setInterval(function() {
-                if (!gameActive || isPaused) return; // Stop counting if paused or over
-
-                if (game.turn() === 'w') {
-                    timeW--;
-                    if (timeW <= 0) endGame("Black", "on time");
-                } else {
-                    timeB--;
-                    if (timeB <= 0) endGame("White", "on time");
-                }
+                if (!gameActive || isPaused) return;
+                if (game.turn() === 'w') { timeW--; if (timeW <= 0) endGame("Black", "on time"); } 
+                else { timeB--; if (timeB <= 0) endGame("White", "on time"); }
                 updateClocks();
+                if(timeW % 5 === 0 || timeB % 5 === 0) saveGameLocally(); // Auto-save time periodically
             }, 1000);
-        }
-
-        // --- GAME FLOW LOGIC ---
-        function showSetup() {
-            $('#gameOverModal').addClass('hidden');
-            $('#setupModal').removeClass('hidden');
-        }
-
-        function startGame(seconds) {
-            timeLimit = seconds;
-            timeW = seconds;
-            timeB = seconds;
-            game.reset();
-            board.start();
-            selectedSquare = null;
-            removeHighlights();
-            redoStack = []; // Clear redo memory
-            gameActive = true;
-            isPaused = false;
-            
-            $('#setupModal').addClass('hidden');
-            updateClocks();
-            startTimer(); 
-            updateStatus();
         }
 
         function togglePause() {
             if (!gameActive) return;
             isPaused = !isPaused;
-            if (isPaused) {
-                $('#pauseModal').removeClass('hidden');
-                updateClocks(); // removes active color highlight
-            } else {
-                $('#pauseModal').addClass('hidden');
-                updateClocks(); // brings back active color highlight
-            }
+            if (isPaused) $('#pauseModal').removeClass('hidden');
+            else $('#pauseModal').addClass('hidden');
+            updateClocks();
         }
 
         function endGame(winnerName, reason) {
-            gameActive = false;
-            clearInterval(timerInterval);
-            updateClocks();
-            
-            if (winnerName === "Draw") {
-                $('#winnerText').text("It's a Draw!");
-                $('#winnerText').css('color', '#aaa');
-            } else {
-                $('#winnerText').text(winnerName + " Wins!");
-                $('#winnerText').css('color', 'var(--accent-color)');
-            }
-            $('#winReason').text(reason);
-            $('#gameOverModal').removeClass('hidden');
+            gameActive = false; clearInterval(timerInterval); updateClocks(); clearSave();
+            if (winnerName === "Draw") { $('#winnerText').text("It's a Draw!").css('color', '#aaa'); } 
+            else { $('#winnerText').text(winnerName + " Wins!").css('color', 'var(--accent-color)'); }
+            $('#winReason').text(reason); $('#gameOverModal').removeClass('hidden');
         }
 
-        // --- UNDO / REDO LOGIC ---
+        // --- UI UPDATES (Captures & History) ---
+        function updateCapturesAndHistory() {
+            var history = game.history({ verbose: true });
+            
+            // Notation History
+            var pgnArr = game.pgn().split(' ');
+            var historyHtml = '';
+            for(var i=0; i<pgnArr.length; i++) {
+                if(pgnArr[i].includes('.')) {
+                    historyHtml += '<span style="color:#666;">' + pgnArr[i] + '</span>';
+                } else {
+                    var isLast = (i === pgnArr.length - 1);
+                    historyHtml += '<span class="history-move ' + (isLast ? 'active' : '') + '">' + pgnArr[i] + '</span>';
+                }
+            }
+            $('#moveHistory').html(historyHtml);
+            var histBox = document.getElementById('moveHistory');
+            histBox.scrollTop = histBox.scrollHeight;
+
+            // Captures & Material
+            var vals = {p:1, n:3, b:3, r:5, q:9};
+            var capW = {p:0,n:0,b:0,r:0,q:0}, capB = {p:0,n:0,b:0,r:0,q:0};
+            var scoreW = 0, scoreB = 0;
+
+            history.forEach(m => {
+                if(m.captured) {
+                    if(m.color === 'w') { capW[m.captured]++; scoreW += vals[m.captured]; } // White took a black piece
+                    else { capB[m.captured]++; scoreB += vals[m.captured]; }
+                }
+            });
+
+            function buildHtml(caps, colorPrefix) {
+                var h = '';
+                ['p','n','b','r','q'].forEach(p => {
+                    for(var i=0; i<caps[p]; i++) {
+                        h += '<img src="https://chessboardjs.com/img/chesspieces/wikipedia/' + colorPrefix + p.toUpperCase() + '.png">';
+                    }
+                });
+                return h;
+            }
+
+            var wHtml = buildHtml(capW, 'b'); // White's captures are black pieces
+            var bHtml = buildHtml(capB, 'w'); 
+            
+            if(scoreW > scoreB) wHtml += '<span class="score-advantage">+' + (scoreW - scoreB) + '</span>';
+            if(scoreB > scoreW) bHtml += '<span class="score-advantage">+' + (scoreB - scoreW) + '</span>';
+
+            $('#whiteCaptures').html(wHtml);
+            $('#blackCaptures').html(bHtml);
+        }
+
+        // --- MOVE EXECUTION ---
+        function executeMove(moveObj) {
+            var move = game.move(moveObj);
+            if (move) {
+                redoStack = []; 
+                board.position(game.fen());
+                removeHighlights(); selectedSquare = null;
+                
+                // Audio & Haptics
+                if(game.in_check()) { playSound('check'); triggerHaptics('check'); }
+                else if(move.captured) { playSound('capture'); triggerHaptics('capture'); }
+                else { playSound('move'); triggerHaptics('move'); }
+
+                updateStatus(); updateCapturesAndHistory(); saveGameLocally();
+
+                // Auto-Flip with a tiny delay so you see the piece land first
+                if (autoFlip && gameActive) {
+                    setTimeout(() => {
+                        board.orientation(game.turn() === 'w' ? 'white' : 'black');
+                    }, 400); 
+                }
+                return true;
+            }
+            return false;
+        }
+
         function undoMove() {
             if (!gameActive || isPaused) return;
             var move = game.undo();
             if (move) {
-                redoStack.push(move); // Save it so we can redo it
-                board.position(game.fen());
-                removeHighlights();
-                selectedSquare = null;
-                updateStatus();
+                redoStack.push(move); board.position(game.fen());
+                if(autoFlip) board.orientation(game.turn() === 'w' ? 'white' : 'black');
+                removeHighlights(); selectedSquare = null;
+                updateStatus(); updateCapturesAndHistory(); saveGameLocally();
             }
         }
 
         function redoMove() {
             if (!gameActive || isPaused || redoStack.length === 0) return;
             var moveToRedo = redoStack.pop();
-            game.move(moveToRedo);
-            board.position(game.fen());
-            removeHighlights();
-            selectedSquare = null;
-            updateStatus();
+            executeMove(moveToRedo);
         }
 
-        function updateControlButtons() {
-            $('#undoBtn').prop('disabled', game.history().length === 0);
-            $('#redoBtn').prop('disabled', redoStack.length === 0);
-        }
-
-        // --- BOARD HIGHLIGHTS ---
-        function removeHighlights() {
-            $('#board .square-55d63').removeClass('highlight-dot highlight-capture highlight-selected');
-        }
-
-        function showMoves(square) {
-            var moves = game.moves({ square: square, verbose: true });
-            if (moves.length === 0) return;
-
-            for (var i = 0; i < moves.length; i++) {
-                var move = moves[i];
-                var $square = $('#board .square-' + move.to);
-                if (move.captured) $square.addClass('highlight-capture');
-                else $square.addClass('highlight-dot');
-            }
-        }
-
-        // --- PROMOTION LOGIC ---
+        // --- PROMOTION ---
         function triggerPromotionUI(source, target, color) {
             pendingMove = { from: source, to: target };
             var html = '';
-            var pieces = ['q', 'r', 'n', 'b'];
-            
-            pieces.forEach(function(p) {
-                // VERY IMPORTANT: Using reliable chessboardjs images to prevent broken links
-                var pieceName = color + p.toUpperCase() + '.png';
-                var imgUrl = 'https://chessboardjs.com/img/chesspieces/wikipedia/' + pieceName;
-                html += '<div class="promo-piece" onclick="finalizePromotion(\'' + p + '\')"><img src="' + imgUrl + '" onerror="this.style.display=\'none\'"></div>';
+            ['q', 'r', 'n', 'b'].forEach(function(p) {
+                var imgUrl = 'https://chessboardjs.com/img/chesspieces/wikipedia/' + color + p.toUpperCase() + '.png';
+                html += '<div class="promo-piece" onclick="finalizePromotion(\'' + p + '\')"><img src="' + imgUrl + '"></div>';
             });
-            
-            $('#promoContainer').html(html);
-            $('#promotionModal').removeClass('hidden');
+            $('#promoContainer').html(html); $('#promotionModal').removeClass('hidden');
         }
 
-        window.finalizePromotion = function(promotedPiece) {
+        window.finalizePromotion = function(prom) {
             $('#promotionModal').addClass('hidden');
-            var move = game.move({
-                from: pendingMove.from,
-                to: pendingMove.to,
-                promotion: promotedPiece
-            });
-
-            if (move) {
-                redoStack = []; // Clear redo stack on a new move
-                board.position(game.fen());
-                removeHighlights();
-                selectedSquare = null;
-                updateStatus();
-            }
+            executeMove({ from: pendingMove.from, to: pendingMove.to, promotion: prom });
             pendingMove = null;
         };
 
         // --- TAP TO MOVE LOGIC ---
+        function removeHighlights() { $('#board .square-55d63').removeClass('highlight-dot highlight-capture highlight-selected'); }
+
+        function showMoves(square) {
+            var moves = game.moves({ square: square, verbose: true });
+            moves.forEach(m => {
+                var $sq = $('#board .square-' + m.to);
+                if (m.captured) $sq.addClass('highlight-capture');
+                else $sq.addClass('highlight-dot');
+            });
+        }
+
         $('#board').on('click', '.square-55d63', function() {
-            if (!gameActive || isPaused) return; // Prevent moves if paused
+            if (!gameActive || isPaused) return;
             var square = $(this).attr('data-square');
             var piece = game.get(square);
 
             if (selectedSquare) {
-                var possibleMoves = game.moves({ verbose: true });
-                var isPromo = false;
+                var moves = game.moves({ verbose: true });
+                var isPromo = moves.some(m => m.from === selectedSquare && m.to === square && m.promotion);
                 
-                for (var i = 0; i < possibleMoves.length; i++) {
-                    if (possibleMoves[i].from === selectedSquare && possibleMoves[i].to === square && possibleMoves[i].promotion) {
-                        isPromo = true; break;
-                    }
-                }
-
-                if (isPromo) {
-                    triggerPromotionUI(selectedSquare, square, game.turn());
-                    return; 
-                }
-
-                var move = game.move({ from: selectedSquare, to: square });
-
-                if (move) {
-                    redoStack = []; // Clear redo history when a new move is made
-                    board.position(game.fen());
-                    removeHighlights();
-                    selectedSquare = null;
-                    updateStatus();
-                    return;
-                }
+                if (isPromo) { triggerPromotionUI(selectedSquare, square, game.turn()); return; }
+                if (executeMove({ from: selectedSquare, to: square })) return;
             }
 
-            if (selectedSquare === square) {
-                selectedSquare = null;
-                removeHighlights();
-                return;
-            }
+            if (selectedSquare === square) { selectedSquare = null; removeHighlights(); return; }
 
             removeHighlights();
-
             if (piece && piece.color === game.turn()) {
                 selectedSquare = square;
                 $(this).addClass('highlight-selected');
                 showMoves(square);
-            } else {
-                selectedSquare = null;
-            }
+            } else { selectedSquare = null; }
         });
 
         function updateStatus () {
             if (!gameActive) return;
-
             var moveColor = game.turn() === 'b' ? 'Black' : 'White';
-            updateControlButtons();
+            
+            $('#undoBtn').prop('disabled', game.history().length === 0);
+            $('#redoBtn').prop('disabled', redoStack.length === 0);
 
             if (game.in_checkmate()) {
                 endGame(moveColor === 'White' ? 'Black' : 'White', "by Checkmate");
-                $status.html('Game over, checkmate.');
+                $status.html('Checkmate!');
             } else if (game.in_draw()) {
-                endGame("Draw", "by insufficient material or stalemate");
-                $status.html('Game over, drawn position');
+                endGame("Draw", "by rules of chess");
+                $status.html('Draw');
             } else {
                 var statusHTML = moveColor + ' to move';
                 if (game.in_check()) statusHTML += ' (Check!)';
@@ -490,14 +529,8 @@
             }
         }
 
-        // Initialize Board using ultra-reliable standard pieces
-        var config = {
-            draggable: false, 
-            position: 'start',
-            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
-        };
+        var config = { draggable: false, position: 'start', pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png' };
         board = Chessboard('board', config);
-        
         showSetup();
         $(window).resize(board.resize);
     </script>
