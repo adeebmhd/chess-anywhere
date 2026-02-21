@@ -35,7 +35,7 @@ The ultimate flex: no messy folders. Everything you need is right here.
 chess-anywhere/
 ├── index.html      # Main app structure, pro-gaming UI, and Core game logic + AI
 └── README.md       # Project documentation
-
+```
 
 ## 🛠️ Built With
 
