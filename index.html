@@ -144,11 +144,14 @@
             </select>
 
             <div class="time-options">
+                <button class="time-btn" onclick="startGame(60)">Bullet (1 min)</button>
                 <button class="time-btn" onclick="startGame(180)">Blitz (3 min)</button>
                 <button class="time-btn" onclick="startGame(300)">Blitz (5 min)</button>
                 <button class="time-btn" onclick="startGame(600)">Rapid (10 min)</button>
+                <button class="time-btn" onclick="customTimeSetup()">Custom</button>
                 <button class="time-btn" onclick="startGame(0)">Unlimited</button>
             </div>
+            
             <div class="settings-row" id="flipSettingRow">
                 <input type="checkbox" id="spinPiecesCheck" checked>
                 <label for="spinPiecesCheck">Spin pieces for opponent</label>
@@ -212,7 +215,6 @@
             if(theme === 'bubblegum') { root.style.setProperty('--accent-color', '#d65a88'); root.style.setProperty('--light-square', '#f2c9d8'); }
         }
 
-        // FIXED LOGIC: Removes/adds the hidden class directly instead of using .show() / .hide()
         $('#gameMode').on('change', function() {
             if (this.value === 'ai') { 
                 $('#spinPiecesCheck').prop('checked', false); 
@@ -288,6 +290,19 @@
         }
 
         function showSetup() { $('#gameOverModal').addClass('hidden'); checkSave(); $('#setupModal').removeClass('hidden'); }
+
+        // NEW: Custom Time Prompt Logic
+        function customTimeSetup() {
+            var mins = prompt("Enter custom time in minutes (e.g., 15 or 1.5):", "15");
+            if (mins !== null) {
+                var parsedMins = parseFloat(mins);
+                if (!isNaN(parsedMins) && parsedMins > 0) {
+                    startGame(Math.floor(parsedMins * 60)); // Convert minutes to seconds
+                } else {
+                    alert("Please enter a valid number greater than 0.");
+                }
+            }
+        }
 
         function startGame(seconds) {
             if(audioCtx.state === 'suspended') audioCtx.resume();
