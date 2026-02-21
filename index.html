@@ -7,15 +7,16 @@
     
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     
     <style>
         :root {
             --bg-color: #121212;
             --text-color: #ffffff;
-            --accent-color: #739552; /* Chess.com Green */
-            --light-square: #ebecd0; /* Chess.com White/Cream */
-            --highlight: rgba(235, 226, 75, 0.7); /* Chess.com Yellow Selection */
+            --accent-color: #739552; 
+            --light-square: #ebecd0; 
+            --highlight: rgba(235, 226, 75, 0.7); 
+            --clock-bg: #2c2c2c;
         }
         
         body {
@@ -27,122 +28,178 @@
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
+            overflow-x: hidden;
         }
 
         header {
-            margin-top: 30px;
-            margin-bottom: 20px;
+            margin-top: 20px;
+            margin-bottom: 10px;
             text-align: center;
         }
 
         h1 {
             margin: 0;
-            font-size: 2.5rem;
+            font-size: 2.2rem;
             color: var(--accent-color);
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .clock-container {
+            width: 95%;
+            max-width: 400px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .clock {
+            background-color: var(--clock-bg);
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            font-family: monospace;
+            color: #ccc;
+            transition: 0.3s;
+        }
+
+        .clock.active {
+            background-color: #ffffff;
+            color: #000000;
+        }
+
+        .clock.low-time {
+            background-color: #cc3333;
+            color: #ffffff;
         }
 
         #board {
             width: 95%;
             max-width: 400px;
-            margin-bottom: 20px;
             box-shadow: 0 8px 16px rgba(0,0,0,0.8);
             border-radius: 4px;
-            
-            /* CRITICAL FIX: Stops the page from scrolling when you tap the board */
             touch-action: none; 
             user-select: none;
             -webkit-user-select: none;
         }
 
-        /* Overriding default board colors to match Chess.com */
         .white-1e1d7 { background-color: var(--light-square) !important; color: var(--accent-color) !important; }
         .black-3c85d { background-color: var(--accent-color) !important; color: var(--light-square) !important; }
         
-        /* Ensure squares can hold the absolute positioned dots */
-        .square-55d63 { 
-            position: relative; 
-            cursor: pointer;
-        }
+        .square-55d63 { position: relative; cursor: pointer; }
 
-        /* Highlight for the currently selected piece */
-        .highlight-selected {
-            background-color: var(--highlight) !important;
-        }
+        .highlight-selected { background-color: var(--highlight) !important; }
 
-        /* Dot for empty square moves */
         .highlight-dot::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 25%;
-            height: 25%;
-            background-color: rgba(0, 0, 0, 0.25);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
+            content: ''; position: absolute; top: 50%; left: 50%; width: 25%; height: 25%;
+            background-color: rgba(0, 0, 0, 0.25); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none;
         }
 
-        /* Ring for capturing enemy pieces */
         .highlight-capture::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 85%;
-            height: 85%;
-            border: 6px solid rgba(0, 0, 0, 0.25);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            box-sizing: border-box;
-            pointer-events: none;
+            content: ''; position: absolute; top: 50%; left: 50%; width: 85%; height: 85%;
+            border: 6px solid rgba(0, 0, 0, 0.25); border-radius: 50%; transform: translate(-50%, -50%); box-sizing: border-box; pointer-events: none;
         }
 
         #status {
-            font-weight: 600;
-            font-size: 1.2rem;
-            margin-bottom: 20px;
-            color: var(--light-square);
+            font-weight: 600; font-size: 1.1rem; margin-top: 15px; margin-bottom: 15px; color: var(--light-square);
         }
 
         .menu {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            width: 90%;
-            max-width: 400px;
-            margin-bottom: 40px;
+            display: flex; width: 90%; max-width: 400px; margin-bottom: 20px; justify-content: center;
         }
 
         .btn {
-            background-color: var(--accent-color);
-            color: white;
-            border: none;
-            padding: 15px;
-            font-size: 1.1rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-family: 'Poppins', sans-serif;
-            font-weight: 600;
-            transition: 0.2s;
+            background-color: var(--accent-color); color: white; border: none; padding: 12px 20px;
+            font-size: 1.1rem; border-radius: 8px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 600; width: 100%;
         }
 
-        .btn:active { background-color: #5c7741; }
+        /* --- MODALS --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.85); display: flex; justify-content: center; align-items: center;
+            z-index: 1000; flex-direction: column;
+        }
+
+        .modal-content {
+            background: #1e1e1e; padding: 30px; border-radius: 12px; text-align: center; max-width: 350px; width: 80%;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        .modal-title { font-size: 1.8rem; font-weight: 700; margin-top: 0; margin-bottom: 20px; color: var(--accent-color); }
+        
+        /* Time Options */
+        .time-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .time-btn {
+            background: #333; color: white; border: none; padding: 15px; border-radius: 8px;
+            font-size: 1rem; font-family: 'Poppins'; cursor: pointer; font-weight: 600;
+        }
+        .time-btn:active { background: var(--accent-color); }
+
+        /* Promotion Options */
+        .promo-pieces { display: flex; justify-content: space-around; margin-top: 20px; }
+        .promo-piece {
+            width: 60px; height: 60px; cursor: pointer; background: #333; border-radius: 8px;
+            display: flex; justify-content: center; align-items: center; transition: 0.2s;
+        }
+        .promo-piece img { width: 50px; height: 50px; }
+        .promo-piece:active { background: var(--accent-color); }
+
+        .hidden { display: none !important; }
 
     </style>
 </head>
 <body>
 
+    <div id="setupModal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 class="modal-title">Game Setup</h2>
+            <p>Select Time Control</p>
+            <div class="time-options">
+                <button class="time-btn" onclick="startGame(180)">Blitz (3 min)</button>
+                <button class="time-btn" onclick="startGame(300)">Blitz (5 min)</button>
+                <button class="time-btn" onclick="startGame(600)">Rapid (10 min)</button>
+                <button class="time-btn" onclick="startGame(0)">Unlimited</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="promotionModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2 class="modal-title" style="color: white;">Promote Pawn</h2>
+            <div class="promo-pieces" id="promoContainer">
+                </div>
+        </div>
+    </div>
+
+    <div id="gameOverModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2 class="modal-title" id="winnerText">White Wins!</h2>
+            <p id="winReason" style="margin-bottom: 25px;">by Checkmate</p>
+            <button class="btn" onclick="showSetup()">Play Again</button>
+        </div>
+    </div>
+
     <header>
         <h1>Chess Anywhere</h1>
     </header>
 
+    <div class="clock-container">
+        <div style="font-weight: 600; color: #aaa;">Black</div>
+        <div id="blackClock" class="clock">00:00</div>
+    </div>
+
     <div id="board"></div>
+
+    <div class="clock-container">
+        <div style="font-weight: 600; color: #aaa;">White</div>
+        <div id="whiteClock" class="clock">00:00</div>
+    </div>
+
     <div id="status">White to move</div>
 
     <div class="menu">
-        <button class="btn" onclick="resetGame()">Restart Game</button>
+        <button class="btn" onclick="showSetup()">New Game / Restart</button>
     </div>
 
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
@@ -154,6 +211,104 @@
         var $status = $('#status');
         var selectedSquare = null;
 
+        // Timer Variables
+        var timeLimit = 0; 
+        var timeW = 0;
+        var timeB = 0;
+        var timerInterval = null;
+        var gameActive = false;
+
+        // Promotion Variables
+        var pendingMove = null;
+
+        // --- CLOCK LOGIC ---
+        function formatTime(seconds) {
+            if (seconds <= 0) return "00:00";
+            var m = Math.floor(seconds / 60);
+            var s = seconds % 60;
+            return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+        }
+
+        function updateClocks() {
+            if (timeLimit === 0) {
+                $('#whiteClock, #blackClock').text("∞");
+                return;
+            }
+            $('#whiteClock').text(formatTime(timeW));
+            $('#blackClock').text(formatTime(timeB));
+
+            // Highlight active clock
+            $('#whiteClock').removeClass('active low-time');
+            $('#blackClock').removeClass('active low-time');
+            
+            if (gameActive) {
+                if (game.turn() === 'w') {
+                    $('#whiteClock').addClass('active');
+                    if (timeW < 30) $('#whiteClock').addClass('low-time');
+                } else {
+                    $('#blackClock').addClass('active');
+                    if (timeB < 30) $('#blackClock').addClass('low-time');
+                }
+            }
+        }
+
+        function startTimer() {
+            if (timeLimit === 0) return; // No timer for unlimited
+            if (timerInterval) clearInterval(timerInterval);
+            
+            timerInterval = setInterval(function() {
+                if (!gameActive) return;
+
+                if (game.turn() === 'w') {
+                    timeW--;
+                    if (timeW <= 0) endGame("Black", "on time");
+                } else {
+                    timeB--;
+                    if (timeB <= 0) endGame("White", "on time");
+                }
+                updateClocks();
+            }, 1000);
+        }
+
+        // --- GAME FLOW LOGIC ---
+        function showSetup() {
+            $('#gameOverModal').addClass('hidden');
+            $('#setupModal').removeClass('hidden');
+        }
+
+        function startGame(seconds) {
+            timeLimit = seconds;
+            timeW = seconds;
+            timeB = seconds;
+            game.reset();
+            board.start();
+            selectedSquare = null;
+            removeHighlights();
+            gameActive = true;
+            
+            $('#setupModal').addClass('hidden');
+            updateClocks();
+            startTimer(); // Clocks tick immediately
+            updateStatus();
+        }
+
+        function endGame(winnerName, reason) {
+            gameActive = false;
+            clearInterval(timerInterval);
+            updateClocks();
+            
+            if (winnerName === "Draw") {
+                $('#winnerText').text("It's a Draw!");
+                $('#winnerText').css('color', '#aaa');
+            } else {
+                $('#winnerText').text(winnerName + " Wins!");
+                $('#winnerText').css('color', 'var(--accent-color)');
+            }
+            $('#winReason').text(reason);
+            $('#gameOverModal').removeClass('hidden');
+        }
+
+        // --- BOARD HIGHLIGHTS ---
         function removeHighlights() {
             $('#board .square-55d63').removeClass('highlight-dot highlight-capture highlight-selected');
         }
@@ -165,29 +320,69 @@
             for (var i = 0; i < moves.length; i++) {
                 var move = moves[i];
                 var $square = $('#board .square-' + move.to);
-                
-                if (move.captured) {
-                    $square.addClass('highlight-capture');
-                } else {
-                    $square.addClass('highlight-dot');
-                }
+                if (move.captured) $square.addClass('highlight-capture');
+                else $square.addClass('highlight-dot');
             }
         }
 
-        // Tap-to-move logic
+        // --- PROMOTION LOGIC ---
+        function triggerPromotionUI(source, target, color) {
+            pendingMove = { from: source, to: target };
+            var html = '';
+            var pieces = ['q', 'r', 'n', 'b'];
+            
+            pieces.forEach(function(p) {
+                var imgUrl = 'https://lichess1.org/assets/piece/cburnett/' + color + p + '.svg';
+                html += '<div class="promo-piece" onclick="finalizePromotion(\'' + p + '\')"><img src="' + imgUrl + '"></div>';
+            });
+            
+            $('#promoContainer').html(html);
+            $('#promotionModal').removeClass('hidden');
+        }
+
+        window.finalizePromotion = function(promotedPiece) {
+            $('#promotionModal').addClass('hidden');
+            var move = game.move({
+                from: pendingMove.from,
+                to: pendingMove.to,
+                promotion: promotedPiece
+            });
+
+            if (move) {
+                board.position(game.fen());
+                removeHighlights();
+                selectedSquare = null;
+                updateStatus();
+            }
+            pendingMove = null;
+        };
+
+        // --- TAP TO MOVE LOGIC ---
         $('#board').on('click', '.square-55d63', function() {
+            if (!gameActive) return;
             var square = $(this).attr('data-square');
             var piece = game.get(square);
 
-            // If a piece is already selected, try to move to the tapped square
             if (selectedSquare) {
-                var move = game.move({
-                    from: selectedSquare,
-                    to: square,
-                    promotion: 'q' // Auto-promote to queen
-                });
+                // Check if this move is a promotion
+                var possibleMoves = game.moves({ verbose: true });
+                var isPromo = false;
+                
+                for (var i = 0; i < possibleMoves.length; i++) {
+                    if (possibleMoves[i].from === selectedSquare && possibleMoves[i].to === square && possibleMoves[i].promotion) {
+                        isPromo = true;
+                        break;
+                    }
+                }
 
-                // If the move is valid, execute it
+                if (isPromo) {
+                    triggerPromotionUI(selectedSquare, square, game.turn());
+                    return; // Pause here and wait for modal click
+                }
+
+                // Normal move attempt
+                var move = game.move({ from: selectedSquare, to: square });
+
                 if (move) {
                     board.position(game.fen());
                     removeHighlights();
@@ -197,20 +392,17 @@
                 }
             }
 
-            // If you tap the already selected piece, deselect it
             if (selectedSquare === square) {
                 selectedSquare = null;
                 removeHighlights();
                 return;
             }
 
-            // Clear previous highlights
             removeHighlights();
 
-            // If you tap one of your own pieces, select it and show moves
             if (piece && piece.color === game.turn()) {
                 selectedSquare = square;
-                $(this).addClass('highlight-selected'); // Yellow background on tapped piece
+                $(this).addClass('highlight-selected');
                 showMoves(square);
             } else {
                 selectedSquare = null;
@@ -218,39 +410,34 @@
         });
 
         function updateStatus () {
-            var statusHTML = '';
+            if (!gameActive) return;
+
             var moveColor = game.turn() === 'b' ? 'Black' : 'White';
 
             if (game.in_checkmate()) {
-                statusHTML = 'Game over, ' + moveColor + ' is in checkmate!';
+                endGame(moveColor === 'White' ? 'Black' : 'White', "by Checkmate");
+                $status.html('Game over, checkmate.');
             } else if (game.in_draw()) {
-                statusHTML = 'Game over, drawn position';
+                endGame("Draw", "by insufficient material or stalemate");
+                $status.html('Game over, drawn position');
             } else {
-                statusHTML = moveColor + ' to move';
-                if (game.in_check()) {
-                    statusHTML += ' (Check!)';
-                }
+                var statusHTML = moveColor + ' to move';
+                if (game.in_check()) statusHTML += ' (Check!)';
+                $status.html(statusHTML);
+                updateClocks(); // Update active colors immediately on turn switch
             }
-            $status.html(statusHTML);
         }
 
-        // Initialize Board - Notice draggable is strictly FALSE now
+        // Initialize Board
         var config = {
             draggable: false, 
             position: 'start',
             pieceTheme: 'https://lichess1.org/assets/piece/cburnett/{piece}.svg'
         };
-        
         board = Chessboard('board', config);
-        updateStatus();
-
-        function resetGame() {
-            game.reset();
-            board.start();
-            selectedSquare = null;
-            removeHighlights();
-            updateStatus();
-        }
+        
+        // Show setup menu immediately on load
+        showSetup();
         
         $(window).resize(board.resize);
     </script>
