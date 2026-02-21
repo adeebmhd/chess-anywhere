@@ -130,7 +130,7 @@
         
         <button class="main-menu-btn" onclick="openExplorerMode()">
             <span style="font-size: 1.2rem; color:white; font-weight: 600;">🧭 Explorer</span>
-            <span>Master Database & Opening Stats</span>
+            <span>Player Database & Opening Stats</span>
         </button>
     </div>
 
@@ -271,7 +271,7 @@
             expBoard.resize();
         }
 
-        // ================= PLAY MODE LOGIC (Your existing code adapted) =================
+        // ================= PLAY MODE LOGIC =================
         var board = null, game = null, $status = $('#status'), selectedSquare = null;
         var timeLimit = 0, timeW = 0, timeB = 0, timerInterval = null, gameActive = false, isPaused = false;
         var redoStack = [], pendingMove = null, spinPieces = true, playMode = 'pvp';
@@ -461,7 +461,7 @@
         function copyPGN() { navigator.clipboard.writeText(game.pgn()).then(()=>alert("Copied!")); }
 
 
-        // ================= EXPLORER MODE LOGIC (NEW) =================
+        // ================= EXPLORER MODE LOGIC =================
         var expBoard = null, expGame = null, expSelectedSquare = null;
         var expRedoStack = [];
         var expIsFlipped = false;
@@ -476,7 +476,7 @@
                 handleSquareClickExpMode($(this).attr('data-square'));
             });
             
-            fetchExplorerData(); // Load initial position
+            fetchExplorerData(); 
         }
 
         function expRemoveHighlights() { $('#explorerBoard .square-55d63').removeClass('highlight-dot highlight-capture highlight-selected last-move'); }
@@ -485,7 +485,6 @@
         function handleSquareClickExpMode(square) {
             var piece = expGame.get(square);
             if (expSelectedSquare) {
-                // Handle Promotion automatically to Queen for simplicity in explorer
                 var moveParams = { from: expSelectedSquare, to: square };
                 if (expGame.moves({verbose:true}).some(m=>m.from===expSelectedSquare&&m.to===square&&m.promotion)) moveParams.promotion = 'q';
                 
@@ -512,7 +511,6 @@
             expBoard.position(expGame.fen());
             expRemoveHighlights();
             
-            // Highlight last move
             var history = expGame.history({verbose: true});
             if(history.length > 0) {
                 var last = history[history.length - 1];
@@ -523,13 +521,13 @@
             fetchExplorerData();
         }
 
-        // Fetch data from Lichess API
+        // --- THE FIX IS HERE ---
         function fetchExplorerData() {
             var fen = expGame.fen();
             $('#expMovesList').html('<div style="padding: 20px; text-align: center; color: #888;">Fetching stats...</div>');
             
-            // Using the master database, which matches your screenshot numbers
-            var url = 'https://explorer.lichess.ovh/master?fen=' + encodeURIComponent(fen);
+            // Now querying the massive Lichess Player database instead of just the Master database
+            var url = 'https://explorer.lichess.ovh/lichess?variant=standard&speeds=bullet,blitz,rapid,classical&ratings=1000,1200,1400,1600,1800,2000,2200,2500&fen=' + encodeURIComponent(fen);
             
             fetch(url)
                 .then(response => response.json())
@@ -540,7 +538,6 @@
         }
 
         function renderExplorerData(data) {
-            // Update Opening Name
             if (data.opening && data.opening.name) {
                 $('#expOpeningName').text(data.opening.name);
             } else {
@@ -560,9 +557,8 @@
                     
                     var wPct = Math.round((move.white / total) * 100);
                     var dPct = Math.round((move.draws / total) * 100);
-                    var bPct = 100 - wPct - dPct; // Ensure it adds to 100
+                    var bPct = 100 - wPct - dPct; 
 
-                    // Format numbers with commas (e.g., 1,997,919)
                     var totalStr = total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
                     html += `
@@ -581,7 +577,6 @@
             $('#expMovesList').html(html);
         }
 
-        // Triggered when clicking a move in the list
         window.makeExplorerMoveFromList = function(san) {
             var move = expGame.move(san);
             if (move) {
@@ -590,7 +585,6 @@
             }
         };
 
-        // Explorer Controls
         window.expFlipBoard = function() {
             expIsFlipped = !expIsFlipped;
             expBoard.orientation(expIsFlipped ? 'black' : 'white');
@@ -618,7 +612,6 @@
             }
         };
 
-        // Init responsive resizing
         $(window).resize(function() {
             if (board && currentMode === 'play') board.resize();
             if (expBoard && currentMode === 'explorer') expBoard.resize();
