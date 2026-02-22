@@ -40,13 +40,11 @@
             text-shadow: 0 10px 30px rgba(115, 149, 82, 0.2);
         }
 
-        /* Container Visibility */
         .view-container { display: none; width: 100%; max-width: 450px; flex-direction: column; align-items: center; animation: fadeIn 0.4s ease; }
         .active-view { display: flex; }
         
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- HOME SCREEN --- */
         .home-logo { font-size: 4.5rem; margin-bottom: 30px; filter: drop-shadow(0 0 15px rgba(115, 149, 82, 0.4)); }
         .main-menu-btn {
             background: var(--surface-color); color: var(--text-main); 
@@ -65,7 +63,6 @@
         .main-menu-btn:active { transform: translateY(0); }
         .main-menu-btn span.subtext { font-size: 0.85rem; font-weight: 400; color: var(--text-muted); }
 
-        /* --- SHARED UI --- */
         .nav-header { display: flex; width: 95%; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .back-icon { 
             cursor: pointer; font-size: 1.2rem; background: var(--surface-color); 
@@ -76,7 +73,6 @@
         .back-icon:hover { background: #333; transform: scale(1.05); }
         .header-title { display: flex; align-items: center; gap: 10px; font-size: 1.2rem; font-weight: 600; letter-spacing: 0.5px;}
 
-        /* --- BOARD STYLES --- */
         .board-wrapper { 
             width: 95%; max-width: 400px; border-radius: 6px; overflow: hidden;
             box-shadow: 0 15px 35px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05); 
@@ -92,7 +88,6 @@
         .highlight-dot::after { content: ''; position: absolute; top: 50%; left: 50%; width: 25%; height: 25%; background-color: rgba(0, 0, 0, 0.3); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; }
         .highlight-capture::after { content: ''; position: absolute; top: 50%; left: 50%; width: 85%; height: 85%; border: 6px solid rgba(0, 0, 0, 0.3); border-radius: 50%; transform: translate(-50%, -50%); box-sizing: border-box; pointer-events: none; }
 
-        /* --- PLAY UI STYLES --- */
         .player-info { width: 95%; max-width: 400px; display: flex; flex-direction: column; margin-bottom: 10px; }
         .clock-container { display: flex; justify-content: space-between; align-items: center; }
         .clock { 
@@ -254,7 +249,7 @@
         
         <button class="main-menu-btn" onclick="openExplorerMode()">
             <span style="font-size: 1.25rem; color:var(--text-main); font-weight: 600;">🧭 Explorer</span>
-            <span class="subtext">Player Database & Live Engine</span>
+            <span class="subtext">Master Database & Live Engine</span>
         </button>
     </div>
 
@@ -373,12 +368,11 @@
         var pieceBaseUrl = 'https://lichess1.org/assets/piece/cburnett/';
         var currentMode = 'home'; 
         
-        // Navigation
         function goHome() {
             $('.view-container').removeClass('active-view');
             $('#homeView').addClass('active-view');
             if (currentMode === 'play') { isPaused = true; updateClocks(); }
-            if (engine) engine.postMessage('stop'); // Stop engine when leaving explorer
+            if (engine) engine.postMessage('stop'); 
             currentMode = 'home';
         }
 
@@ -398,10 +392,10 @@
             currentMode = 'explorer';
             if (!expBoard) initExplorerMode();
             expBoard.resize();
-            if (expGame) evaluateExplorerPosition(); // Start eval when returning
+            if (expGame) evaluateExplorerPosition(); 
         }
 
-        // ================= PLAY MODE LOGIC (Unchanged) =================
+        // ================= PLAY MODE LOGIC =================
         var board = null, game = null, $status = $('#status'), selectedSquare = null;
         var timeLimit = 0, timeW = 0, timeB = 0, timerInterval = null, gameActive = false, isPaused = false;
         var redoStack = [], pendingMove = null, spinPieces = true, playMode = 'pvp';
@@ -538,13 +532,13 @@
         function copyPGN() { navigator.clipboard.writeText(game.pgn()).then(()=>alert("Copied!")); }
 
 
-        // ================= EXPLORER MODE LOGIC (WITH STOCKFISH) =================
+        // ================= EXPLORER MODE LOGIC =================
         var expBoard = null, expGame = null, expSelectedSquare = null;
         var expRedoStack = [];
         var expIsFlipped = false;
         var engine = null;
 
-        // Load Stockfish safely from CDN using a Blob to bypass CORS
+        // Load Stockfish 
         fetch('https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js')
             .then(res => res.text())
             .then(text => {
@@ -559,14 +553,11 @@
                         var match = line.match(/score cp (-?\d+)/);
                         if (match) {
                             var score = parseInt(match[1]) / 100.0;
-                            // Stockfish sends evaluation from perspective of player to move. 
-                            // We standardize it so positive is ALWAYS good for white.
                             if (expGame.turn() === 'b') score = -score; 
                             
                             var sign = score > 0 ? "+" : "";
                             $('#expEvalText').text(sign + score.toFixed(2));
                             
-                            // Update badge color
                             var $badge = $('#expEvalBadge');
                             $badge.removeClass('eval-positive eval-negative');
                             if (score > 0.5) $badge.addClass('eval-positive');
@@ -595,7 +586,9 @@
             $('#expEvalBadge').removeClass('eval-positive eval-negative');
             engine.postMessage('stop');
             engine.postMessage('position fen ' + expGame.fen());
-            engine.postMessage('go depth 14'); // Depth 14 is fast enough for browsers
+            
+            // INCREASING DEPTH TO 18 FOR HIGHER ACCURACY (Matches Chess.com closer)
+            engine.postMessage('go depth 18'); 
         }
 
         function initExplorerMode() {
@@ -652,14 +645,15 @@
             }
             
             fetchExplorerData();
-            evaluateExplorerPosition(); // Trigger Stockfish every time a move is made
+            evaluateExplorerPosition(); 
         }
 
         function fetchExplorerData() {
             var fen = expGame.fen();
             $('#expMovesList').html('<div style="padding: 30px; text-align: center; color: var(--text-muted);">Fetching stats...</div>');
             
-            var url = 'https://explorer.lichess.ovh/lichess?variant=standard&speeds=bullet,blitz,rapid,classical&ratings=1000,1200,1400,1600,1800,2000,2200,2500&fen=' + encodeURIComponent(fen);
+            // CHANGED BACK TO /MASTER DIRECTORY TO MATCH CHESS.COM'S MASTER VIEW EXACTLY
+            var url = 'https://explorer.lichess.ovh/master?fen=' + encodeURIComponent(fen);
             
             fetch(url)
                 .then(response => response.json())
@@ -681,7 +675,6 @@
             var prefix = expGame.turn() === 'w' ? turnNum + ". " : turnNum + "... ";
 
             if (!data.moves || data.moves.length === 0) {
-                // When DB runs out, tell the user the Engine is still running
                 html = '<div style="padding: 30px; text-align: center; color: var(--text-muted);">Unique position reached.<br><br><span style="color: var(--accent-color); font-weight: 600;">Engine analysis is active.</span></div>';
             } else {
                 data.moves.forEach(move => {
