@@ -150,8 +150,8 @@
         .eval-badge {
             background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
             padding: 4px 10px; border-radius: 6px; font-family: 'Courier New', monospace;
-            font-weight: bold; font-size: 0.9rem; color: var(--text-main);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.3s;
+            font-weight: bold; font-size: 0.8rem; color: var(--text-main);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.3s; white-space: nowrap;
         }
         .eval-positive { color: #82a85e; border-color: rgba(130, 168, 94, 0.4); background: rgba(130, 168, 94, 0.1); }
         .eval-negative { color: #ff6b6b; border-color: rgba(255, 107, 107, 0.4); background: rgba(255, 107, 107, 0.1); }
@@ -201,7 +201,7 @@
         .ai-thinking { color: var(--highlight) !important; animation: pulse 1.5s ease-in-out infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
-        /* ================= RESPONSIVE LAYOUT (PHONE VS PC) ================= */
+        /* ================= RESPONSIVE LAYOUT ================= */
         @media (min-width: 768px) {
             .view-container { max-width: 900px; } 
             
@@ -215,7 +215,7 @@
             }
             
             #explorerView .nav-header { grid-column: 1 / span 2; width: 100%; margin-bottom: 25px;}
-            #explorerView #explorerBoard { grid-column: 1; grid-row: 2 / span 2; margin: 0; width: 100%; max-width: 100%;}
+            #explorerView .board-wrapper { grid-column: 1; grid-row: 2 / span 2; margin: 0; width: 100%; max-width: 100%;}
             
             #explorerView .explorer-stats-container { 
                 grid-column: 2; 
@@ -249,7 +249,7 @@
         
         <button class="main-menu-btn" onclick="openExplorerMode()">
             <span style="font-size: 1.25rem; color:var(--text-main); font-weight: 600;">🧭 Explorer</span>
-            <span class="subtext">Master Database & Live Engine</span>
+            <span class="subtext">Master Database & Hybrid Engine</span>
         </button>
     </div>
 
@@ -307,12 +307,21 @@
             <div style="width: 42px;"></div>
         </div>
 
-        <div id="explorerBoard" class="board-wrapper"></div>
+        <div class="board-wrapper" style="position: relative;">
+            <div id="explorerBoard" style="width: 100%;"></div>
+            <svg id="arrowOverlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;">
+                <defs>
+                    <marker id="arrowhead" markerWidth="3" markerHeight="3" refX="2" refY="1.5" orient="auto">
+                        <polygon points="0 0, 3 1.5, 0 3" fill="rgba(255, 170, 0, 0.75)" />
+                    </marker>
+                </defs>
+            </svg>
+        </div>
 
         <div class="explorer-stats-container">
             <div class="explorer-header-row">
                 <div class="opening-name" id="expOpeningName">Starting Position</div>
-                <div class="eval-badge" id="expEvalBadge">Eval: <span id="expEvalText">0.00</span></div>
+                <div class="eval-badge" id="expEvalBadge">Eval: <span id="expEvalText">0.00 (Cloud)</span></div>
             </div>
             <div id="expMovesList" style="flex-grow: 1;">
                 <div style="padding: 30px; text-align: center; color: var(--text-muted);">Loading database...</div>
@@ -373,6 +382,7 @@
             $('#homeView').addClass('active-view');
             if (currentMode === 'play') { isPaused = true; updateClocks(); }
             if (engine) engine.postMessage('stop'); 
+            clearArrow();
             currentMode = 'home';
         }
 
@@ -532,13 +542,52 @@
         function copyPGN() { navigator.clipboard.writeText(game.pgn()).then(()=>alert("Copied!")); }
 
 
-        // ================= EXPLORER MODE LOGIC =================
+        // ================= EXPLORER MODE LOGIC (HYBRID ENGINE & ARROWS) =================
         var expBoard = null, expGame = null, expSelectedSquare = null;
         var expRedoStack = [];
         var expIsFlipped = false;
         var engine = null;
 
-        // Load Stockfish 
+        // --- ARROW DRAWING LOGIC ---
+        function clearArrow() {
+            $('#arrowOverlay').find('line').remove();
+        }
+
+        function drawArrow(fromSq, toSq) {
+            clearArrow(); // remove old arrow
+            
+            var $from = $('#explorerBoard .square-' + fromSq);
+            var $to = $('#explorerBoard .square-' + toSq);
+            var $overlay = $('#arrowOverlay');
+            
+            // If the squares aren't found (e.g. board flipped mid-calc), skip drawing
+            if ($from.length === 0 || $to.length === 0) return;
+            
+            var fromPos = $from.position();
+            var toPos = $to.position();
+            var sqSize = $from.width();
+            
+            // Get Exact Pixel Center of the Start and End Squares
+            var x1 = fromPos.left + (sqSize / 2);
+            var y1 = fromPos.top + (sqSize / 2);
+            var x2 = toPos.left + (sqSize / 2);
+            var y2 = toPos.top + (sqSize / 2);
+            
+            // Create SVG line dynamically
+            var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', x1);
+            line.setAttribute('y1', y1);
+            line.setAttribute('x2', x2);
+            line.setAttribute('y2', y2);
+            line.setAttribute('stroke', 'rgba(255, 170, 0, 0.75)'); // Glowing orange
+            line.setAttribute('stroke-width', sqSize * 0.15); // Scales thickness with screen size
+            line.setAttribute('stroke-linecap', 'round');
+            line.setAttribute('marker-end', 'url(#arrowhead)');
+            
+            $overlay.append(line);
+        }
+
+        // --- ENGINE LOGIC ---
         fetch('https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js')
             .then(res => res.text())
             .then(text => {
@@ -549,14 +598,16 @@
                     var line = event.data;
                     if (line == 'uciok') {
                         engine.postMessage('isready');
-                    } else if (line.indexOf('info depth') !== -1 && line.indexOf('score cp') !== -1) {
+                    } 
+                    
+                    // Update Evaluation Numbers
+                    else if (line.indexOf('info depth') !== -1 && line.indexOf('score cp') !== -1) {
                         var match = line.match(/score cp (-?\d+)/);
                         if (match) {
                             var score = parseInt(match[1]) / 100.0;
                             if (expGame.turn() === 'b') score = -score; 
-                            
                             var sign = score > 0 ? "+" : "";
-                            $('#expEvalText').text(sign + score.toFixed(2));
+                            $('#expEvalText').text(sign + score.toFixed(2) + " (Local)");
                             
                             var $badge = $('#expEvalBadge');
                             $badge.removeClass('eval-positive eval-negative');
@@ -569,11 +620,20 @@
                             var mateIn = parseInt(match[1]);
                             if (expGame.turn() === 'b') mateIn = -mateIn;
                             var sign = mateIn > 0 ? "+M" : "-M";
-                            $('#expEvalText').text(sign + Math.abs(mateIn));
+                            $('#expEvalText').text(sign + Math.abs(mateIn) + " (Local)");
                             
                             var $badge = $('#expEvalBadge');
                             $badge.removeClass('eval-positive eval-negative');
                             mateIn > 0 ? $badge.addClass('eval-positive') : $badge.addClass('eval-negative');
+                        }
+                    }
+
+                    // Extract the Best Move for the Arrow
+                    if (line.indexOf(' pv ') !== -1) {
+                        var pvMatch = line.match(/ pv ([a-h][1-8][a-h][1-8][qrbn]?)/);
+                        if (pvMatch) {
+                            var bestMove = pvMatch[1];
+                            drawArrow(bestMove.substring(0, 2), bestMove.substring(2, 4));
                         }
                     }
                 };
@@ -582,13 +642,55 @@
 
         function evaluateExplorerPosition() {
             if (!engine || currentMode !== 'explorer') return;
+            var fen = expGame.fen();
+            
             $('#expEvalText').text("...");
             $('#expEvalBadge').removeClass('eval-positive eval-negative');
-            engine.postMessage('stop');
-            engine.postMessage('position fen ' + expGame.fen());
+            engine.postMessage('stop'); 
+            clearArrow();
             
-            // INCREASING DEPTH TO 18 FOR HIGHER ACCURACY (Matches Chess.com closer)
-            engine.postMessage('go depth 18'); 
+            // 1. Try Cloud API First
+            var cloudUrl = 'https://lichess.org/api/cloud-eval?fen=' + encodeURIComponent(fen);
+            fetch(cloudUrl)
+                .then(response => {
+                    if (!response.ok) throw new Error("Not in cloud");
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.pvs && data.pvs.length > 0) {
+                        var pv = data.pvs[0];
+                        var score, sign;
+                        
+                        if (pv.cp !== undefined) {
+                            score = pv.cp / 100.0;
+                            if (expGame.turn() === 'b') score = -score; 
+                            sign = score > 0 ? "+" : "";
+                            $('#expEvalText').text(sign + score.toFixed(2) + " (Cloud)");
+                            var $badge = $('#expEvalBadge');
+                            if (score > 0.5) $badge.addClass('eval-positive');
+                            if (score < -0.5) $badge.addClass('eval-negative');
+                        } else if (pv.mate !== undefined) {
+                            var mateIn = pv.mate;
+                            if (expGame.turn() === 'b') mateIn = -mateIn;
+                            sign = mateIn > 0 ? "+M" : "-M";
+                            $('#expEvalText').text(sign + Math.abs(mateIn) + " (Cloud)");
+                            var $badge = $('#expEvalBadge');
+                            mateIn > 0 ? $badge.addClass('eval-positive') : $badge.addClass('eval-negative');
+                        }
+
+                        // Draw Cloud Arrow
+                        if (pv.moves) {
+                            var bestMove = pv.moves.split(' ')[0];
+                            drawArrow(bestMove.substring(0, 2), bestMove.substring(2, 4));
+                        }
+                    }
+                })
+                .catch(err => {
+                    // 2. Fallback to Local Engine
+                    $('#expEvalText').text("Calc...");
+                    engine.postMessage('position fen ' + fen);
+                    engine.postMessage('go depth 18'); 
+                });
         }
 
         function initExplorerMode() {
@@ -636,6 +738,7 @@
             expSelectedSquare = null;
             expBoard.position(expGame.fen());
             expRemoveHighlights();
+            clearArrow();
             
             var history = expGame.history({verbose: true});
             if(history.length > 0) {
@@ -652,7 +755,6 @@
             var fen = expGame.fen();
             $('#expMovesList').html('<div style="padding: 30px; text-align: center; color: var(--text-muted);">Fetching stats...</div>');
             
-            // CHANGED BACK TO /MASTER DIRECTORY TO MATCH CHESS.COM'S MASTER VIEW EXACTLY
             var url = 'https://explorer.lichess.ovh/master?fen=' + encodeURIComponent(fen);
             
             fetch(url)
@@ -712,11 +814,14 @@
         };
 
         window.expFlipBoard = function() {
+            clearArrow();
             expIsFlipped = !expIsFlipped;
             expBoard.orientation(expIsFlipped ? 'black' : 'white');
+            evaluateExplorerPosition(); // redraw arrow on flipped board
         };
 
         window.expRestart = function() {
+            clearArrow();
             expGame.reset();
             expRedoStack = [];
             updateExplorerAfterMove();
@@ -740,7 +845,10 @@
 
         $(window).resize(function() {
             if (board && currentMode === 'play') board.resize();
-            if (expBoard && currentMode === 'explorer') expBoard.resize();
+            if (expBoard && currentMode === 'explorer') {
+                clearArrow();
+                expBoard.resize();
+            }
         });
 
     </script>
