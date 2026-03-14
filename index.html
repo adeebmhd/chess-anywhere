@@ -367,9 +367,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 
     <script>
-        // --- 1. THE BULLETPROOF IMAGE FIX ---
-        // Using JSDelivr CDN for the pieces. This is an enterprise CDN that Indian ISPs do not block.
-        var pieceBaseUrl = 'https://cdn.jsdelivr.net/gh/oakmac/chessboardjs@master/img/chesspieces/wikipedia/';
+        // --- FIX 1: THE UNPKG PIECE URL ---
+        // This is the EXACT same robust server that successfully loads your chessboard logic.
+        // It cannot be blocked unless the entire game breaks.
+        var pieceBaseUrl = 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chesspieces/wikipedia/';
         var currentMode = 'home'; 
         
         function goHome() {
@@ -681,22 +682,40 @@
             fetchExplorerData(); evaluateExplorerPosition(); 
         }
 
-        // --- 2. THE BULLETPROOF EXPLORER FIX ---
-        // Fetching directly from Lichess's unblocked community database (Filtered to Master-Level ELOs: 2200-2500)
+        // --- FIX 2: THE BULLETPROOF EXPLORER DATABASE FIX ---
+        // We use allorigins proxy wrapper to completely evade ISP CORS blocks on the Master Database
         function fetchExplorerData() {
             var fen = expGame.fen();
-            $('#expMovesList').html('<div style="padding: 30px; text-align: center; color: var(--text-muted);">Fetching high-rated games...</div>');
+            $('#expMovesList').html('<div style="padding: 30px; text-align: center; color: var(--text-muted);">Bypassing network blocks...</div>');
             
-            var url = 'https://explorer.lichess.ovh/lichess?variant=standard&speeds=blitz,rapid,classical&ratings=2200,2500&fen=' + encodeURIComponent(fen);
+            var targetUrl = 'https://explorer.lichess.ovh/master?fen=' + encodeURIComponent(fen);
+            var proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(targetUrl);
             
-            fetch(url)
+            fetch(proxyUrl)
             .then(response => {
-                if (!response.ok) throw new Error("HTTP error " + response.status);
+                if (!response.ok) throw new Error("Proxy connection failed");
                 return response.json();
             })
-            .then(data => renderExplorerData(data))
+            .then(data => {
+                if (data.contents) {
+                    try {
+                        var parsedData = JSON.parse(data.contents);
+                        if(parsedData.error) throw new Error(parsedData.error);
+                        renderExplorerData(parsedData);
+                    } catch(e) { throw new Error("Data parse error"); }
+                } else {
+                    throw new Error("No contents received");
+                }
+            })
             .catch(err => {
-                $('#expMovesList').html('<div style="padding: 30px; text-align: center; color: #ef4444;">Could not connect to database. Check internet connection.</div>');
+                // Secondary Fallback if primary proxy fails
+                var fallbackUrl = 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(targetUrl);
+                fetch(fallbackUrl)
+                .then(res => res.json())
+                .then(data => renderExplorerData(data))
+                .catch(e => {
+                    $('#expMovesList').html('<div style="padding: 30px; text-align: center; color: #ef4444;">API completely blocked by network firewall.</div>');
+                });
             });
         }
 
