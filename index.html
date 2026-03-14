@@ -367,7 +367,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 
     <script>
-        // --- RESTORED: High-Res SVG Pieces ---
+        // --- GLOBAL VARIABLES ---
         var pieceBaseUrl = 'https://lichess1.org/assets/piece/cburnett/';
         var currentMode = 'home'; 
         
@@ -609,7 +609,6 @@
             clearArrow();
             
             var cloudUrl = 'https://lichess.org/api/cloud-eval?fen=' + encodeURIComponent(fen);
-            // REMOVED: Custom auth header to avoid CORS blocking 
             fetch(cloudUrl)
                 .then(response => {
                     if (!response.ok) throw new Error("Not in cloud");
@@ -681,17 +680,22 @@
             fetchExplorerData(); evaluateExplorerPosition(); 
         }
 
+        // --- FIXED: Fetching from the main Lichess Community DB instead of the blocked Master node ---
         function fetchExplorerData() {
             var fen = expGame.fen();
-            $('#expMovesList').html('<div style="padding: 30px; text-align: center; color: var(--text-muted);">Fetching master games...</div>');
-            // REMOVED: Auth header to avoid strict CORS block
-            var url = 'https://explorer.lichess.ovh/master?topGames=0&fen=' + encodeURIComponent(fen);
+            $('#expMovesList').html('<div style="padding: 30px; text-align: center; color: var(--text-muted);">Fetching high-rated games...</div>');
             
-            fetch(url)
-            .then(response => response.json())
+            // This endpoint allows external websites and searches billions of 2200+ ELO games
+            var url = 'https://explorer.lichess.ovh/lichess?variant=standard&speeds=blitz,rapid,classical&ratings=2200,2500&fen=' + encodeURIComponent(fen);
+            
+            fetch(url, { headers: { 'Accept': 'application/json' } })
+            .then(response => {
+                if (!response.ok) throw new Error("HTTP error " + response.status);
+                return response.json();
+            })
             .then(data => renderExplorerData(data))
             .catch(err => {
-                $('#expMovesList').html('<div style="padding: 30px; text-align: center; color: var(--text-muted);">Error loading data.</div>');
+                $('#expMovesList').html('<div style="padding: 30px; text-align: center; color: #ef4444;">Server busy. Try making a move.</div>');
             });
         }
 
