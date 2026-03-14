@@ -11,7 +11,7 @@
     
     <style>
         :root {
-            var(--bg-color): #0f111a;
+            --bg-color: #0f111a;
             --text-main: #ffffff;
             --text-muted: #94a3b8;
             --accent-color: #739552; 
@@ -368,6 +368,7 @@
 
     <script>
         // --- GLOBAL VARIABLES ---
+        // Ensured we are strictly using the working Lichess SVG pieces
         var pieceBaseUrl = 'https://lichess1.org/assets/piece/cburnett/';
         var currentMode = 'home'; 
         
@@ -680,22 +681,33 @@
             fetchExplorerData(); evaluateExplorerPosition(); 
         }
 
-        // --- FIXED: Fetching from the main Lichess Community DB instead of the blocked Master node ---
+        // ================= THE BULLETPROOF PROXY FIX =================
         function fetchExplorerData() {
             var fen = expGame.fen();
-            $('#expMovesList').html('<div style="padding: 30px; text-align: center; color: var(--text-muted);">Fetching high-rated games...</div>');
+            $('#expMovesList').html('<div style="padding: 30px; text-align: center; color: var(--text-muted);">Bypassing CORS restrictions...</div>');
             
-            // This endpoint allows external websites and searches billions of 2200+ ELO games
-            var url = 'https://explorer.lichess.ovh/lichess?variant=standard&speeds=blitz,rapid,classical&ratings=2200,2500&fen=' + encodeURIComponent(fen);
+            // Step 1: The actual Lichess URL we want to hit
+            var targetUrl = 'https://explorer.lichess.ovh/master?fen=' + encodeURIComponent(fen);
             
-            fetch(url, { headers: { 'Accept': 'application/json' } })
+            // Step 2: Route it through an open CORS proxy (corsproxy.io) to strip browser security blocks
+            var proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(targetUrl);
+            
+            fetch(proxyUrl)
             .then(response => {
-                if (!response.ok) throw new Error("HTTP error " + response.status);
+                if (!response.ok) throw new Error("HTTP error");
                 return response.json();
             })
             .then(data => renderExplorerData(data))
             .catch(err => {
-                $('#expMovesList').html('<div style="padding: 30px; text-align: center; color: #ef4444;">Server busy. Try making a move.</div>');
+                // Step 3: Fallback Proxy (allorigins) just in case the first proxy is busy
+                var fallbackUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl);
+                
+                fetch(fallbackUrl)
+                .then(r => r.json())
+                .then(data => renderExplorerData(data))
+                .catch(e => {
+                    $('#expMovesList').html('<div style="padding: 30px; text-align: center; color: #ef4444;">Server busy. Try making a move.</div>');
+                });
             });
         }
 
