@@ -367,9 +367,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 
     <script>
-        // --- GLOBAL VARIABLES ---
-        // PERMANENT FIX: Using GitHub Raw CDN for .png pieces to avoid server blocks
-        var pieceBaseUrl = 'https://raw.githubusercontent.com/oakmac/chessboardjs/master/img/chesspieces/wikipedia/';
+        // --- RESTORED: High-Res SVG Pieces ---
+        var pieceBaseUrl = 'https://lichess1.org/assets/piece/cburnett/';
         var currentMode = 'home'; 
         
         function goHome() {
@@ -407,8 +406,7 @@
 
         function initPlayMode() {
             game = new Chess();
-            // FIXED: Using .png format
-            var config = { draggable: false, position: 'start', pieceTheme: pieceBaseUrl + '{piece}.png' };
+            var config = { draggable: false, position: 'start', pieceTheme: pieceBaseUrl + '{piece}.svg' };
             board = Chessboard('board', config);
             $('#board').on('click', '.square-55d63', function() {
                 if (currentMode !== 'play' || !gameActive || isPaused || (playMode === 'ai' && game.turn() === 'b')) return; 
@@ -485,8 +483,7 @@
             var vals = {p:1, n:3, b:3, r:5, q:9}, cW = {p:0,n:0,b:0,r:0,q:0}, cB = {p:0,n:0,b:0,r:0,q:0}, sW = 0, sB = 0;
             history.forEach(m => { if(m.captured) { if(m.color === 'w') { cW[m.captured]++; sW += vals[m.captured]; } else { cB[m.captured]++; sB += vals[m.captured]; } } });
             
-            // FIXED: Requesting .png images from GitHub
-            function bHtml(caps, cP) { var h=''; ['p','n','b','r','q'].forEach(p=>{for(var i=0;i<caps[p];i++)h+='<img src="'+pieceBaseUrl+cP+p.toUpperCase()+'.png">';}); return h;}
+            function bHtml(caps, cP) { var h=''; ['p','n','b','r','q'].forEach(p=>{for(var i=0;i<caps[p];i++)h+='<img src="'+pieceBaseUrl+cP+p.toUpperCase()+'.svg">';}); return h;}
             var wH = bHtml(cW, 'b'), bH = bHtml(cB, 'w'); if(sW > sB) wH += '<span class="score-advantage">+' + (sW - sB) + '</span>'; if(sB > sW) bH += '<span class="score-advantage">+' + (sB - sW) + '</span>';
             $('#whiteCaptures').html(wH); $('#blackCaptures').html(bH);
         }
@@ -515,8 +512,7 @@
         function undoMove() { if (!gameActive || isPaused) return; var m = game.undo(); if (playMode === 'ai' && m && game.turn() === 'b') { redoStack.push(m); m = game.undo(); } if (m) { redoStack.push(m); board.position(game.fen()); removeHighlights(); selectedSquare = null; updateStatus(); updateCapturesAndHistory(); saveGameLocally(); } }
         function redoMove() { if (!gameActive || isPaused || redoStack.length === 0) return; executeMove(redoStack.pop()); if (playMode === 'ai' && redoStack.length > 0) executeMove(redoStack.pop()); }
 
-        // FIXED: Requesting .png images from GitHub
-        function triggerPromotionUI(s, t, c) { pendingMove={from:s,to:t}; var h=''; ['q','r','n','b'].forEach(p=>{h+='<div class="promo-piece" onclick="finalizePromotion(\''+p+'\')"><img src="'+pieceBaseUrl+c+p.toUpperCase()+'.png"></div>';}); $('#promoContainer').html(h); $('#promotionModal').removeClass('hidden'); }
+        function triggerPromotionUI(s, t, c) { pendingMove={from:s,to:t}; var h=''; ['q','r','n','b'].forEach(p=>{h+='<div class="promo-piece" onclick="finalizePromotion(\''+p+'\')"><img src="'+pieceBaseUrl+c+p.toUpperCase()+'.svg"></div>';}); $('#promoContainer').html(h); $('#promotionModal').removeClass('hidden'); }
         window.finalizePromotion = function(p) { $('#promotionModal').addClass('hidden'); executeMove({from:pendingMove.from,to:pendingMove.to,promotion:p}); pendingMove=null; };
 
         function removeHighlights() { $('#board .square-55d63').removeClass('highlight-dot highlight-capture highlight-selected'); }
@@ -613,8 +609,8 @@
             clearArrow();
             
             var cloudUrl = 'https://lichess.org/api/cloud-eval?fen=' + encodeURIComponent(fen);
-            // ADDED API KEY HERE TOO for Cloud Eval stability
-            fetch(cloudUrl, { headers: { 'Authorization': 'Bearer Lip_RIu3uJ279BOd6VyYPSrH' } })
+            // REMOVED: Custom auth header to avoid CORS blocking 
+            fetch(cloudUrl)
                 .then(response => {
                     if (!response.ok) throw new Error("Not in cloud");
                     return response.json();
@@ -647,8 +643,7 @@
 
         function initExplorerMode() {
             expGame = new Chess();
-            // FIXED: Using .png format
-            var config = { draggable: false, position: 'start', pieceTheme: pieceBaseUrl + '{piece}.png' };
+            var config = { draggable: false, position: 'start', pieceTheme: pieceBaseUrl + '{piece}.svg' };
             expBoard = Chessboard('explorerBoard', config);
             
             $('#explorerBoard').on('click', '.square-55d63', function() {
@@ -689,12 +684,10 @@
         function fetchExplorerData() {
             var fen = expGame.fen();
             $('#expMovesList').html('<div style="padding: 30px; text-align: center; color: var(--text-muted);">Fetching master games...</div>');
-            var url = 'https://explorer.lichess.ovh/master?fen=' + encodeURIComponent(fen);
+            // REMOVED: Auth header to avoid strict CORS block
+            var url = 'https://explorer.lichess.ovh/master?topGames=0&fen=' + encodeURIComponent(fen);
             
-            // FIXED: INJECTED YOUR LICHESS API TOKEN HERE
-            fetch(url, {
-                headers: { 'Authorization': 'Bearer Lip_RIu3uJ279BOd6VyYPSrH' }
-            })
+            fetch(url)
             .then(response => response.json())
             .then(data => renderExplorerData(data))
             .catch(err => {
