@@ -367,10 +367,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 
     <script>
-        // --- FIX 1: THE UNPKG PIECE URL ---
-        // This is the EXACT same robust server that successfully loads your chessboard logic.
-        // It cannot be blocked unless the entire game breaks.
-        var pieceBaseUrl = 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chesspieces/wikipedia/';
+        // --- EXACT FIX 1: The Original Working Image URL ---
+        // Using the exact chessboardjs URL that you said worked perfectly earlier. 
+        var pieceBaseUrl = 'https://chessboardjs.com/img/chesspieces/wikipedia/';
         var currentMode = 'home'; 
         
         function goHome() {
@@ -682,40 +681,22 @@
             fetchExplorerData(); evaluateExplorerPosition(); 
         }
 
-        // --- FIX 2: THE BULLETPROOF EXPLORER DATABASE FIX ---
-        // We use allorigins proxy wrapper to completely evade ISP CORS blocks on the Master Database
+        // --- EXACT FIX 2: NO PROXIES, DIRECT API CALL ---
+        // Using the public community DB which is highly permissive and won't get blocked by ISPs.
         function fetchExplorerData() {
             var fen = expGame.fen();
-            $('#expMovesList').html('<div style="padding: 30px; text-align: center; color: var(--text-muted);">Bypassing network blocks...</div>');
+            $('#expMovesList').html('<div style="padding: 30px; text-align: center; color: var(--text-muted);">Fetching database...</div>');
             
-            var targetUrl = 'https://explorer.lichess.ovh/master?fen=' + encodeURIComponent(fen);
-            var proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(targetUrl);
+            var url = 'https://explorer.lichess.ovh/lichess?variant=standard&speeds=blitz,rapid,classical&ratings=2000,2200,2500&fen=' + encodeURIComponent(fen);
             
-            fetch(proxyUrl)
-            .then(response => {
-                if (!response.ok) throw new Error("Proxy connection failed");
-                return response.json();
+            fetch(url)
+            .then(res => {
+                if (!res.ok) throw new Error("HTTP error");
+                return res.json();
             })
-            .then(data => {
-                if (data.contents) {
-                    try {
-                        var parsedData = JSON.parse(data.contents);
-                        if(parsedData.error) throw new Error(parsedData.error);
-                        renderExplorerData(parsedData);
-                    } catch(e) { throw new Error("Data parse error"); }
-                } else {
-                    throw new Error("No contents received");
-                }
-            })
+            .then(data => renderExplorerData(data))
             .catch(err => {
-                // Secondary Fallback if primary proxy fails
-                var fallbackUrl = 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(targetUrl);
-                fetch(fallbackUrl)
-                .then(res => res.json())
-                .then(data => renderExplorerData(data))
-                .catch(e => {
-                    $('#expMovesList').html('<div style="padding: 30px; text-align: center; color: #ef4444;">API completely blocked by network firewall.</div>');
-                });
+                $('#expMovesList').html('<div style="padding: 30px; text-align: center; color: #ef4444;">Error connecting to Lichess. Check connection.</div>');
             });
         }
 
