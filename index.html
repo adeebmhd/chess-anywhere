@@ -36,7 +36,6 @@
             text-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
 
-        /* V2.0 Player Info Cards */
         .player-info { 
             width: 95%; max-width: 400px; display: flex; flex-direction: column; margin-bottom: 12px; 
             background: var(--glass-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
@@ -58,7 +57,6 @@
         .captures img { width: 18px; height: 18px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5)); }
         .score-advantage { color: var(--accent-color); font-weight: 700; margin-left: 6px; }
 
-        /* V2.0 The Floating Board */
         #board-container {
             width: 95%; max-width: 400px; margin-bottom: 12px;
             border-radius: 8px; padding: 4px; background: var(--glass-bg);
@@ -84,7 +82,6 @@
 
         #status { font-weight: 600; font-size: 1.1rem; margin-bottom: 12px; color: var(--light-square); text-align: center; letter-spacing: 0.5px;}
 
-        /* V2.0 App Toolbars */
         .controls { 
             display: flex; justify-content: space-between; width: 95%; max-width: 400px; margin-bottom: 10px; gap: 8px; 
             background: rgba(0,0,0,0.2); padding: 6px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.03); box-sizing: border-box;
@@ -97,6 +94,23 @@
         .controls .btn:disabled { opacity: 0.4; cursor: not-allowed; }
         .controls .btn.danger:active { background: #ef4444; }
 
+        /* V2.0 Glass Explorer Panel */
+        #explorerPanel {
+            width: 95%; max-width: 400px; background: var(--glass-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border); border-radius: 12px; padding: 15px; box-sizing: border-box; margin-bottom: 15px; 
+            color: #fff; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        }
+        .explorer-header { font-size: 0.8rem; color: #94a3b8; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px; }
+        .explore-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 6px; border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer; transition: 0.2s; border-radius: 6px;}
+        .explore-row:hover { background: rgba(255,255,255,0.05); }
+        .explore-row:last-child { border-bottom: none; }
+        .move-san { width: 25%; font-weight: 700; font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: var(--accent-color); }
+        .move-games { width: 25%; font-size: 0.75rem; color: #94a3b8; text-align: right; margin-right: 15px; font-family: 'JetBrains Mono', monospace;}
+        .move-bar { flex: 1; display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: rgba(255,255,255,0.1);}
+        .bar-w { background: #e2e8f0; }
+        .bar-d { background: #64748b; }
+        .bar-b { background: #334155; }
+
         .history-box {
             width: 95%; max-width: 400px; background: rgba(0,0,0,0.2); border-radius: 12px; padding: 12px;
             box-sizing: border-box; height: 75px; overflow-y: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;
@@ -107,15 +121,14 @@
         .history-move.active { background: var(--accent-color); color: white; font-weight: bold; box-shadow: 0 2px 8px rgba(0,0,0,0.3);}
 
         .menu { display: flex; width: 95%; max-width: 400px; justify-content: center; gap: 10px;}
-        .btn {
+        .btn-large {
             background: linear-gradient(135deg, var(--accent-color), #5c7741); color: white; border: none; padding: 14px 10px;
             font-size: 1rem; border-radius: 10px; cursor: pointer; font-family: 'Inter', sans-serif; font-weight: 600; width: 100%;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: 0.2s; border: 1px solid rgba(255,255,255,0.1);
         }
-        .btn:active { transform: translateY(2px); box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+        .btn-large:active { transform: translateY(2px); box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
         .btn-secondary { background: rgba(255,255,255,0.05); border-color: var(--glass-border); }
 
-        /* V2.0 Glass Modals */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
@@ -157,6 +170,7 @@
         .promo-piece img { width: 55px; height: 55px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));}
         .promo-piece:active { background: var(--accent-color); transform: scale(0.9); }
 
+        .hidden { display: none !important; }
         .ai-thinking { color: var(--highlight) !important; animation: pulse 1.5s ease-in-out infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
@@ -199,13 +213,13 @@
                 <input type="checkbox" id="spinPiecesCheck" checked>
                 <label for="spinPiecesCheck">Spin pieces for opponent</label>
             </div>
-            <button id="resumeBtn" class="btn btn-secondary hidden" style="margin-top:5px;" onclick="resumeGame()">Resume Game</button>
+            <button id="resumeBtn" class="btn-large btn-secondary hidden" style="margin-top:5px;" onclick="resumeGame()">Resume Game</button>
         </div>
     </div>
 
-    <div id="pauseModal" class="modal-overlay hidden"><div class="modal-content"><h2 class="modal-title">Paused</h2><button class="btn" onclick="togglePause()">Resume Game</button></div></div>
+    <div id="pauseModal" class="modal-overlay hidden"><div class="modal-content"><h2 class="modal-title">Paused</h2><button class="btn-large" onclick="togglePause()">Resume Game</button></div></div>
     <div id="promotionModal" class="modal-overlay hidden"><div class="modal-content"><h2 class="modal-title">Promote Pawn</h2><div class="promo-pieces" id="promoContainer"></div></div></div>
-    <div id="gameOverModal" class="modal-overlay hidden"><div class="modal-content"><h2 class="modal-title" id="winnerText">White Wins!</h2><p id="winReason" style="margin-bottom: 25px; color: #94a3b8;">by Checkmate</p><button class="btn" onclick="showSetup()">Play Again</button></div></div>
+    <div id="gameOverModal" class="modal-overlay hidden"><div class="modal-content"><h2 class="modal-title" id="winnerText">White Wins!</h2><p id="winReason" style="margin-bottom: 25px; color: #94a3b8;">by Checkmate</p><button class="btn-large" onclick="showSetup()">Play Again</button></div></div>
 
     <header><h1>Chess Anywhere</h1></header>
 
@@ -234,18 +248,26 @@
     <div class="controls">
         <button class="btn" id="undoBtn" onclick="undoMove()">⟲ Undo</button>
         <button class="btn" id="redoBtn" onclick="redoMove()">⟳ Redo</button>
-        <button class="btn" id="pauseBtn" onclick="togglePause()">⏸ Pause</button>
+        <button class="btn" onclick="toggleExplorer()" style="color: #60a5fa;">🔍 Explore</button>
     </div>
     <div class="controls">
         <button class="btn" onclick="offerDraw()">½ Draw</button>
+        <button class="btn" id="pauseBtn" onclick="togglePause()">⏸ Pause</button>
         <button class="btn danger" onclick="resign()">⚐ Resign</button>
+    </div>
+
+    <div id="explorerPanel" class="hidden">
+        <div class="explorer-header">Opening Explorer (Master Database)</div>
+        <div id="explorerContent">
+            <div style="text-align:center; color:#94a3b8; font-size: 0.85rem; padding: 10px;">Make a move to see Grandmaster statistics...</div>
+        </div>
     </div>
 
     <div class="history-box" id="moveHistory"></div>
     
     <div class="menu">
-        <button class="btn btn-secondary" onclick="showSetup()">⚙️ Setup</button>
-        <button class="btn btn-secondary" onclick="copyPGN()">📋 Export PGN</button>
+        <button class="btn-large btn-secondary" onclick="showSetup()">⚙️ Setup</button>
+        <button class="btn-large btn-secondary" onclick="copyPGN()">📋 Export PGN</button>
     </div>
 
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
@@ -255,6 +277,7 @@
         var board = null, game = new Chess(), $status = $('#status'), selectedSquare = null;
         var timeLimit = 0, timeW = 0, timeB = 0, timerInterval = null, gameActive = false, isPaused = false;
         var redoStack = [], pendingMove = null, spinPieces = true, playMode = 'pvp';
+        var showExplorer = false;
 
         var pieceBaseUrl = 'https://lichess1.org/assets/piece/cburnett/';
 
@@ -359,6 +382,7 @@
             
             $('#setupModal').addClass('hidden');
             updateClocks(); startTimer(); updateStatus(); updateCapturesAndHistory(); saveGameLocally();
+            if(showExplorer) updateExplorer(); 
         }
 
         function formatTime(sec) {
@@ -440,6 +464,58 @@
             $('#whiteCaptures').html(wHtml); $('#blackCaptures').html(bHtml);
         }
 
+        // --- EXPLORER LOGIC ---
+        function toggleExplorer() {
+            showExplorer = !showExplorer;
+            if(showExplorer) {
+                $('#explorerPanel').removeClass('hidden');
+                updateExplorer();
+            } else {
+                $('#explorerPanel').addClass('hidden');
+            }
+        }
+
+        function updateExplorer() {
+            if(!showExplorer || !gameActive) return;
+            var currentFen = game.fen();
+            $('#explorerContent').html('<div style="text-align:center; color:#94a3b8; padding: 10px; font-size: 0.85rem;">Loading Master Database...</div>');
+            
+            fetch('https://explorer.lichess.ovh/master?fen=' + encodeURIComponent(currentFen))
+                .then(res => res.json())
+                .then(data => {
+                    var html = '';
+                    if(data.moves && data.moves.length > 0) {
+                        data.moves.slice(0, 5).forEach(m => {
+                            var total = m.white + m.draws + m.black;
+                            var wPct = (m.white / total) * 100;
+                            var dPct = (m.draws / total) * 100;
+                            var bPct = (m.black / total) * 100;
+                            
+                            html += '<div class="explore-row" onclick="playExplorerMove(\'' + m.san + '\')">' +
+                                    '<div class="move-san">' + m.san + '</div>' +
+                                    '<div class="move-games">' + total.toLocaleString() + '</div>' +
+                                    '<div class="move-bar">' +
+                                        '<div class="bar-w" style="width:'+wPct+'%"></div>' +
+                                        '<div class="bar-d" style="width:'+dPct+'%"></div>' +
+                                        '<div class="bar-b" style="width:'+bPct+'%"></div>' +
+                                    '</div></div>';
+                        });
+                    } else {
+                        html = '<div style="text-align:center; color:#94a3b8; font-size: 0.85rem; padding: 10px;">End of Opening Book. No master games found in this position.</div>';
+                    }
+                    $('#explorerContent').html(html);
+                })
+                .catch(err => {
+                    $('#explorerContent').html('<div style="text-align:center; color:#ef4444; font-size: 0.85rem; padding: 10px;">No internet connection for Explorer.</div>');
+                });
+        }
+
+        function playExplorerMove(sanMove) {
+            if (playMode === 'ai' && game.turn() === 'b') return; 
+            executeMove(sanMove); 
+        }
+
+        // --- ARTIFICIAL INTELLIGENCE ---
         function evaluateBoard(gameObj) {
             var totalEvaluation = 0;
             var pieceValues = { 'p': 10, 'n': 30, 'b': 30, 'r': 50, 'q': 90, 'k': 900 };
@@ -544,6 +620,9 @@
                 else { playSound('move'); triggerHaptics('move'); }
 
                 updateStatus(); updateCapturesAndHistory(); saveGameLocally();
+                
+                if (showExplorer) updateExplorer(); 
+
                 if (playMode === 'ai' && game.turn() === 'b' && gameActive) makeComputerMove();
                 return true;
             }
@@ -559,6 +638,7 @@
             if (move) {
                 redoStack.push(move); board.position(game.fen());
                 removeHighlights(); selectedSquare = null; updateStatus(); updateCapturesAndHistory(); saveGameLocally();
+                if (showExplorer) updateExplorer();
             }
         }
 
