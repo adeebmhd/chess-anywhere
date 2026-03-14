@@ -367,9 +367,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 
     <script>
-        // --- GLOBAL VARIABLES ---
-        // Ensured we are strictly using the working Lichess SVG pieces
-        var pieceBaseUrl = 'https://lichess1.org/assets/piece/cburnett/';
+        // --- 1. THE BULLETPROOF IMAGE FIX ---
+        // Using JSDelivr CDN for the pieces. This is an enterprise CDN that Indian ISPs do not block.
+        var pieceBaseUrl = 'https://cdn.jsdelivr.net/gh/oakmac/chessboardjs@master/img/chesspieces/wikipedia/';
         var currentMode = 'home'; 
         
         function goHome() {
@@ -407,7 +407,7 @@
 
         function initPlayMode() {
             game = new Chess();
-            var config = { draggable: false, position: 'start', pieceTheme: pieceBaseUrl + '{piece}.svg' };
+            var config = { draggable: false, position: 'start', pieceTheme: pieceBaseUrl + '{piece}.png' };
             board = Chessboard('board', config);
             $('#board').on('click', '.square-55d63', function() {
                 if (currentMode !== 'play' || !gameActive || isPaused || (playMode === 'ai' && game.turn() === 'b')) return; 
@@ -484,7 +484,7 @@
             var vals = {p:1, n:3, b:3, r:5, q:9}, cW = {p:0,n:0,b:0,r:0,q:0}, cB = {p:0,n:0,b:0,r:0,q:0}, sW = 0, sB = 0;
             history.forEach(m => { if(m.captured) { if(m.color === 'w') { cW[m.captured]++; sW += vals[m.captured]; } else { cB[m.captured]++; sB += vals[m.captured]; } } });
             
-            function bHtml(caps, cP) { var h=''; ['p','n','b','r','q'].forEach(p=>{for(var i=0;i<caps[p];i++)h+='<img src="'+pieceBaseUrl+cP+p.toUpperCase()+'.svg">';}); return h;}
+            function bHtml(caps, cP) { var h=''; ['p','n','b','r','q'].forEach(p=>{for(var i=0;i<caps[p];i++)h+='<img src="'+pieceBaseUrl+cP+p.toUpperCase()+'.png">';}); return h;}
             var wH = bHtml(cW, 'b'), bH = bHtml(cB, 'w'); if(sW > sB) wH += '<span class="score-advantage">+' + (sW - sB) + '</span>'; if(sB > sW) bH += '<span class="score-advantage">+' + (sB - sW) + '</span>';
             $('#whiteCaptures').html(wH); $('#blackCaptures').html(bH);
         }
@@ -513,7 +513,7 @@
         function undoMove() { if (!gameActive || isPaused) return; var m = game.undo(); if (playMode === 'ai' && m && game.turn() === 'b') { redoStack.push(m); m = game.undo(); } if (m) { redoStack.push(m); board.position(game.fen()); removeHighlights(); selectedSquare = null; updateStatus(); updateCapturesAndHistory(); saveGameLocally(); } }
         function redoMove() { if (!gameActive || isPaused || redoStack.length === 0) return; executeMove(redoStack.pop()); if (playMode === 'ai' && redoStack.length > 0) executeMove(redoStack.pop()); }
 
-        function triggerPromotionUI(s, t, c) { pendingMove={from:s,to:t}; var h=''; ['q','r','n','b'].forEach(p=>{h+='<div class="promo-piece" onclick="finalizePromotion(\''+p+'\')"><img src="'+pieceBaseUrl+c+p.toUpperCase()+'.svg"></div>';}); $('#promoContainer').html(h); $('#promotionModal').removeClass('hidden'); }
+        function triggerPromotionUI(s, t, c) { pendingMove={from:s,to:t}; var h=''; ['q','r','n','b'].forEach(p=>{h+='<div class="promo-piece" onclick="finalizePromotion(\''+p+'\')"><img src="'+pieceBaseUrl+c+p.toUpperCase()+'.png"></div>';}); $('#promoContainer').html(h); $('#promotionModal').removeClass('hidden'); }
         window.finalizePromotion = function(p) { $('#promotionModal').addClass('hidden'); executeMove({from:pendingMove.from,to:pendingMove.to,promotion:p}); pendingMove=null; };
 
         function removeHighlights() { $('#board .square-55d63').removeClass('highlight-dot highlight-capture highlight-selected'); }
@@ -643,7 +643,7 @@
 
         function initExplorerMode() {
             expGame = new Chess();
-            var config = { draggable: false, position: 'start', pieceTheme: pieceBaseUrl + '{piece}.svg' };
+            var config = { draggable: false, position: 'start', pieceTheme: pieceBaseUrl + '{piece}.png' };
             expBoard = Chessboard('explorerBoard', config);
             
             $('#explorerBoard').on('click', '.square-55d63', function() {
@@ -681,33 +681,22 @@
             fetchExplorerData(); evaluateExplorerPosition(); 
         }
 
-        // ================= THE BULLETPROOF PROXY FIX =================
+        // --- 2. THE BULLETPROOF EXPLORER FIX ---
+        // Fetching directly from Lichess's unblocked community database (Filtered to Master-Level ELOs: 2200-2500)
         function fetchExplorerData() {
             var fen = expGame.fen();
-            $('#expMovesList').html('<div style="padding: 30px; text-align: center; color: var(--text-muted);">Bypassing CORS restrictions...</div>');
+            $('#expMovesList').html('<div style="padding: 30px; text-align: center; color: var(--text-muted);">Fetching high-rated games...</div>');
             
-            // Step 1: The actual Lichess URL we want to hit
-            var targetUrl = 'https://explorer.lichess.ovh/master?fen=' + encodeURIComponent(fen);
+            var url = 'https://explorer.lichess.ovh/lichess?variant=standard&speeds=blitz,rapid,classical&ratings=2200,2500&fen=' + encodeURIComponent(fen);
             
-            // Step 2: Route it through an open CORS proxy (corsproxy.io) to strip browser security blocks
-            var proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(targetUrl);
-            
-            fetch(proxyUrl)
+            fetch(url)
             .then(response => {
-                if (!response.ok) throw new Error("HTTP error");
+                if (!response.ok) throw new Error("HTTP error " + response.status);
                 return response.json();
             })
             .then(data => renderExplorerData(data))
             .catch(err => {
-                // Step 3: Fallback Proxy (allorigins) just in case the first proxy is busy
-                var fallbackUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl);
-                
-                fetch(fallbackUrl)
-                .then(r => r.json())
-                .then(data => renderExplorerData(data))
-                .catch(e => {
-                    $('#expMovesList').html('<div style="padding: 30px; text-align: center; color: #ef4444;">Server busy. Try making a move.</div>');
-                });
+                $('#expMovesList').html('<div style="padding: 30px; text-align: center; color: #ef4444;">Could not connect to database. Check internet connection.</div>');
             });
         }
 
